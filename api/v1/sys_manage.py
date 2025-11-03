@@ -49,7 +49,7 @@ async def show_group_info(req: sys_manage.GroupQuery) -> Any:
 
         result4 = []
         if 'department' in req.groupId:
-            db = await async_db.execute(  Department.select(Department.id, Department.updateAt, Department.code.alias('key'),
+            db = await async_db.execute(  Department.select(Department.id, Department.update_time, Department.code.alias('key'),
                                  Department.name.alias('value')).where(
                 Department.code.contains(req.key), Department.name.contains(req.value)).dicts())
             result4 = list(db)

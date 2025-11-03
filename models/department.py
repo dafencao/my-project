@@ -3,12 +3,14 @@
 """
 
 from common.session import BaseModel, paginator, db, async_db
-from peewee import CharField, IntegerField, BigAutoField,BigIntegerField
+from peewee import CharField, IntegerField, BigAutoField,BigIntegerField,DateTimeField
 from playhouse.shortcuts import model_to_dict, dict_to_model
 from sqlalchemy.orm import relationship
 from peewee import fn, JOIN
 import time
 from utils.tools_func import convert_arr, convert_num_arr
+from datetime import datetime
+import pytz
 
 
 class Department(BaseModel):
@@ -31,6 +33,8 @@ class Department(BaseModel):
     status = CharField(max_length=1, null=False, default='0', verbose_name="部门状态")
     # 删除标志：char(1)，'0' 表示未删除，'1' 表示已删除（非空）
     del_flag = CharField(max_length=1, null=False, default='0', verbose_name="删除标志")
+    create_time = DateTimeField(default=datetime.now(pytz.timezone('Asia/Shanghai')), verbose_name="创建时间")
+    update_time = DateTimeField(default=datetime.now(pytz.timezone('Asia/Shanghai')), verbose_name="创建时间")
 
 
     class Meta:
@@ -54,7 +58,7 @@ class Department(BaseModel):
     async def update_department(cls, department):
         # 字典结构更新数据
         print(department)
-        u = await async_db.execute(Department.update(**department).where(Department.dept_id == department['id']))
+        u = await async_db.execute(Department.update(**department).where(Department.dept_id == department['dept_id']))
         #
         return u
 

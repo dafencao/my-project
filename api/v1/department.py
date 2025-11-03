@@ -47,11 +47,11 @@ async def del_department(
         return resp.fail(resp.DataDestroyFail, detail=str(e))
     return resp.ok(data=result)
 
-@router.put("/sys/department/edit/{dept_id}", summary="编辑菜单", name="编辑菜单")
+@router.put("/sys/department/edit", summary="编辑菜单", name="编辑菜单")
 async def edit_department(
     department: sys_department_schema.DepartmentUpdate,
 ) -> Any:
-    department.updateAt = datetime.strftime(
+    department.update_time = datetime.strftime(
         datetime.now(pytz.timezone('Asia/Shanghai')), '%Y-%m-%d %H:%M:%S')
     # print(department)
     department = dict(department)

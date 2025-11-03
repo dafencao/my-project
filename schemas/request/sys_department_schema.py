@@ -55,7 +55,7 @@ class DepartmentBase(BaseModel):
     create_time: Optional[datetime] = None
     
 class DepartmentUpdate(BaseModel):
-    id: Optional[int] = None
+    dept_id: Optional[int] = None
     parent_id: Optional[int] = Field(
         None, 
         description="父部门ID(顶级部门传 null 或不传)"
