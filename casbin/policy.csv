@@ -1,0 +1,105 @@
+p, *, /api/docs, *
+p, *, /api/test/*, *
+p, *, /api/openapi.json, *
+p, *, /api/user/login,POST
+p, *, /api/user/sys/permission/getUserPermissionByToken,GET
+p, *, /api/user/currentUser,GET
+p, *, /api/fan_introduction/query_all,GET
+p, *, /api/fan/detail,POST
+p, *, /api/perf/detail,POST
+p, *, /api/perf/add,POST
+
+p, * ,/api/fan/appl/all,GET
+p, * ,/api/fan/cool/all,GET
+p, * , /api/fan/cool/queryAll,GET
+p, * , /api/fan/category/all,GET
+
+p, /fan/1" , /api/fan/show,POST
+p, /fan/1:auth_tree,/api/fan/tree,GET
+
+
+p, /fan/4" , /api/fan/show,POST
+p, /fan/4" ,/api/fan/addPerfData,POST
+p, /fan/4" ,/api/fan/delete,POST
+p, /fan/4" ,/api/fan/add,POST
+p, /fan/4" ,/api/fan/getFanVersionData,POST
+
+p, /fan/2" , /api/fan/similar/show,POST
+p, /fan/2" ,/api/perf/show/list,POST
+p, /fan/2" ,/api/fan/category/group,GET
+
+p, /fan/5" ,/api/fan/auditShow,POST
+p, /fan/5:audit,/api/fan/addAudit,POST
+p, /fan/5:auditByLead,/api/fan/addAudit,POST
+p, /fan/5:auditAlter,/api/fan/addAudit,POST
+p, /fan/5:auditByLead,/api/fan/queryUpdateFansOriginFan,POST
+p, /fan/5:auditAlter,/api/fan/queryUpdateFansOriginFan,POST
+
+p, /fan/6" ,/api/fan/auditShow,POST
+p, /fan/6" ,/api/getAuditRecord,POST
+p, /fan/6" ,/api/perf/show,POST
+p, /fan/6" ,/api/fan/alter,POST
+p, /fan/6" ,/api/fan/category/group,GET
+p, /fan/6" ,/api/fan/addPerfData,POST
+p, /fan/6" ,/api/fan/add,POST
+p, /fan/6" ,/api/fan/update,POST
+p, /fan/6" ,/api/fan/getPassedFanVersionData,POST
+
+p, /system/MenuList",/phm-web-service-gz/sys/permission/list,POST
+p, /system/MenuList",/phm-web-service-gz/sys/permission/add,POST
+p, /system/MenuList",/phm-web-service-gz/sys/permission/delete,DELETE
+p, /system/MenuList",/phm-web-service-gz/sys/permission/deleteBatch,DELETE
+p, /system/MenuList",/phm-web-service-gz/sys/permission/edit,PUT
+p,/system/RoleList",/phm-web-service-gz/sys/permission/queryRolePermission/*,GET
+p,/system/RoleList",/phm-web-service-gz/sys/permission/saveRolePermission,POST
+
+p, /system/MenuList",/phm-web-service-gz/sys/role/queryTreeList,POST
+p,/system/RoleList",/phm-web-service-gz/role/show,POST
+p,/system/RoleList",/phm-web-service-gz/sys/role/add,POST
+p,/system/RoleList",/phm-web-service-gz/sys/role/delete,POST
+p, /system/MenuList",/phm-web-service-gz/sys/role/edit,POST
+p,/system/RoleList",/phm-web-service-gz/sys/role/queryTreeList,GET
+
+
+p,/system/UserList",/phm-web-service-gz/role/all,GET
+p,/system/UserList",/api/user/add,POST
+p,/system/UserList",/api/user/add/list,POST
+p,/system/UserList",/api/user/delete,DELETE
+p,/system/UserList",/api/user/update,PUT
+p,/system/UserList",/api/user/show,POST
+p,/system/UserList",/api/user/get/*,GET
+p,/system/UserList",/api/user/role,POST
+p,*,/api/user/sys/updatePassword,PUT
+p,/system/UserList",/api/user/sys/changePassword,PUT
+p,/system/UserList",/api/user/level,GET
+p,/system/UserList",/api/user/line,GET
+p,/system/UserList",/api/user/post,GET
+p,/system/UserList",/api/user/department,GET
+
+p, FanIntroduction",/api/fan_introduction/query_all,POST
+p, FanIntroduction",/api/fan_introduction/add,POST
+p, FanIntroduction",/api/fan_introduction/delete,POST
+p, FanIntroduction",/api/fan_introduction/query_by,POST
+p, FanIntroduction",/api/fan_introduction/update,PUT
+
+p, UserAction",/api/user_action/query_all,POST
+p, UserAction",/api/user_action/query_by,POST
+p, *, /api/user_action/add,POST
+
+p,/system/Manage",/api/sys/group/show,POST
+p,/system/Manage",/api/sys/group/add,POST
+p,/system/Manage",/api/sys/group/delete,DELETE
+p,/system/Manage",/api/sys/group/update,PUT
+
+
+p,/system/Manage",/api/sys/department/show,POST
+p,/system/Manage",/api/sys/department/add,POST
+p,/system/Manage",/api/sys/department/delete,DELETE
+p,/system/Manage",/api/sys/department/edit,PUT
+
+p,/system/Manage",/api/fan/category/show,POST
+p,/system/Manage",/api/fan/category/add,POST
+p,/system/Manage",/api/fan/category/delete,DELETE
+p,/system/Manage",/api/fan/category/edit,PUT
+
+p,*,/api/Haulage/add,*

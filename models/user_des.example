@@ -1,0 +1,152 @@
+
+"""
+纯增删改查操作，写在model里面
+"""
+
+from common.session import BaseModel, paginator, db
+from peewee import CharField, IntegerField
+from playhouse.shortcuts import model_to_dict, dict_to_model
+from sqlalchemy.orm import relationship
+from schemas.request import sys_user_schema
+# from models.users import User
+from peewee import fn
+# 用户类
+
+
+class User(BaseModel):
+    """
+    用户表
+    """
+    id = IntegerField()
+    realname = CharField()
+    email = CharField()
+    phone = IntegerField()
+    account = CharField()
+    avatar = CharField()
+    password = CharField()
+    role = CharField()
+    # ora_code = CharField()
+    oraCode = CharField(column_name='ora_code')
+
+    sex = CharField()
+    # created_at= CharField()
+    # updated_at = CharField()
+    # deleted_at = CharField()
+
+    class Meta:
+        table_name = 'user'  # 自定义映射的表名
+    # 也可以根据类名选择表的名称
+    # class Meta:
+    #     database = db
+
+    @classmethod
+    def fuzzy_query(cls, queryUser):
+
+        # fn.abs(User.full_pressure - queryUser.full_pressure).alias('count')
+
+        db = User.select().where(
+            User.account.contains(queryUser.account),
+            #     # User.role.contains(queryUser.role),
+            #     User.realname.contains(queryUser.realname),
+            #     User.email.contains(queryUser.email),
+            #     User.phone.contains(queryUser.phone),
+            #     User.ora_code.contains(queryUser.oraCode),
+            #     User.sex.contains(queryUser.sex),
+        ).dicts()
+
+        # .order_by(
+        #     # fn.abs(User.flow_rate-queryUser.flowRate),
+        # )
+        db = db.offset((queryUser.current - 1) *
+                       queryUser.pageSize).limit(queryUser.pageSize)
+        return list(db)
+
+    @classmethod
+    def fuzzy_query_by_dict(cls, queryUser):
+
+        # fn.abs(User.full_pressure - queryUser.full_pressure).alias('count')
+
+        db = User.select().where(
+            User.account.contains(queryUser['account']),
+            # User.role.contains(queryUser['role']),
+            User.realname.contains(queryUser['realname']),
+
+            User.email.contains(queryUser['email']),
+            User.phone.contains(queryUser['phone']),
+            User.ora_code.contains(queryUser['oraCode']),
+            User.sex.contains(queryUser['sex']),
+            # (queryUser.flow_rate is None) | (
+            #     User.flow_rate == queryUser.flow_rate),
+
+        ).order_by(
+            # fn.abs(User.flow_rate-queryUser['flowRate']),
+        ).dicts()
+        db = db.offset((queryUser['current'] - 1) *
+                       queryUser['pageSize']).limit(queryUser['pageSize'])
+        return list(db)
+
+    @classmethod
+    def single_by_account(cls, account: str):
+        db = User.select().where(User.account == account).first()
+        if db is None:
+            return None
+        return model_to_dict(db)
+        # db = User.select().where(User.account == account).dicts()
+        # return db[0]
+
+    @classmethod
+    def get_user_by_phone(cls, phone: int):
+        return User.filter(User.phone == phone).first()
+
+    @classmethod
+    def single_by_phone(cls, phone: int = 0):
+        db = User.select()
+
+        if phone != 0:
+            db = db.where(User.phone == phone)
+        return db.first()
+        if db:
+            return model_to_dict(db)
+
+    @classmethod
+    def fetch_all(cls, page: int = 1, page_size: int = 10):
+        db = User.select(User.name, User.email, User.phone, User.account, User.avatar, User.created_at,
+                         User.deleted_at)
+
+        user_list, paginate = paginator(db, page, page_size, "id desc")
+
+        return user_list, paginate
+
+    @classmethod
+    def add_user(cls, user):
+        # nickname: str,email: str,password: str,authority_id,avatar: str   name=user.name,
+        # nickname=nickname,email=email,password=password,authority_id=authority_id,avatar=avatar
+        print("users")
+        print(user)
+        u = User.create(name=user.name, email=user.email, password=user.password,
+                        phone=user.phone, authority_id=user.authority_id, avatar=user.avatar)
+        result = u.save()
+        return result
+
+    @classmethod
+    def del_by_account(cls, account_list):
+        User.delete().where(User.account.in_(
+            account_list)).execute()
+
+    @classmethod
+    def update_user(cls, phone, user):
+        # 字典结构更新user数据
+        print(user)
+        u = User.update(user).where(User.phone == phone)
+        u.execute()
+
+    # @classmethod
+    # def select_by_phone(cls, phone: int):
+    #     db = User.select(User.id, User.name, User.email, User.phone, User.account, User.avatar).\
+    #         where(User.phone == phone)
+    #     return db.first()
+
+    # @classmethod
+    # def get_user_permission(cls, account: str):
+    #     db = User.select().where(User.phone == phone)
+    #     return db.first()
