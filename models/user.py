@@ -3,14 +3,16 @@
 """
 
 from common.session import BaseModel, paginator, db, async_db
-from peewee import CharField, IntegerField, ForeignKeyField, DateTimeField
+from peewee import CharField, IntegerField, DateTimeField,BigIntegerField,Field
 from playhouse.shortcuts import model_to_dict, dict_to_model
 from sqlalchemy.orm import relationship
 from models.userrole import Userrole
 from schemas.request import sys_user_schema
 from core import security
 from peewee import fn, JOIN
-import datetime
+from datetime import datetime 
+from typing import Optional
+
 
 from utils.tools_func import convert_arr, convert_num_arr
 
@@ -290,13 +292,29 @@ class UserRoleRelp(BaseModel):
 
 
 # TODO:Userinfo=>User
-class Userinfo(BaseModel):
-    """
-    用户信息表 
-    """
+# class Userinfo(BaseModel):
+#     """
+#     用户信息表 
+#     """
 
-    id = IntegerField(primary_key=True)  # id
-    email = CharField()  # 邮箱
+#     user_id = BigIntegerField(primary_key=True)  # id
+#     dept_id: Optional[int] = Field(None, description="部门ID(关联部门表)")
+#     user_name: str = Field(..., max_length=30, description="用户账号(必填,最长30字符)")
+#     nick_name: str = Field(..., max_length=30, description="用户昵称(必填,最长30字符)")
+#     user_type: str = Field(..., max_length=2, description="用户类型(必填,最长2字符,如'02'表示管理员,'01'表示工艺工程师，'03'表示实习生)")
+#     email = CharField(max_length=50, null=True, verbose_name="邮箱")
+#     phonenumber: Optional[str] = Field(None, max_length=11, min_length=11, description="手机号码(可选,必须11位)")
+#     sex: Optional[str] = Field(None, max_length=1, pattern=r'^[男女10]?$', description="用户性别(可选，如'男'/'女'或'1'/'0')")
+#     avatar: Optional[str] = Field(None, max_length=100, description="头像地址(可选,最长100字符)")
+#     password: str = Field(..., max_length=100, description="密码(必填，存储加密后的字符串)")
+#     status: str = Field(..., max_length=1, pattern=r'^[01]?$', description="账号状态(必填，如'0'禁用/'1'正常)")
+#     del_flag: str = Field(..., max_length=1, pattern=r'^[01]?$', description="删除标志(必填，如'0'未删除/'1'已删除)")
+#     login_ip: Optional[str] = Field(None, max_length=128, description="最后登录IP(可选)")
+#     login_date: Optional[datetime] = Field(None, description="最后登录时间(可选，自动更新)")
+
+    
+
+class Userinfo(BaseModel):
     birthday = CharField()  # 生日
     avatar = CharField()  # 头像
     oraCode = IntegerField(column_name='ora_code')  # 部门code
@@ -310,13 +328,8 @@ class Userinfo(BaseModel):
     jobAge = IntegerField(column_name='job_age')  # 从业年限
     phone = CharField()  # 手机号
 
-    # postId = ForeignKeyField(Userpost, 'id', column_name='post_id')  # 从事岗位id
-    # lineId = ForeignKeyField(Userline, 'id', column_name='line_id')  # 所属产品线id
-
-    # updateBy = CharField()
-
     class Meta:
-        table_name = 'user'  # 自定义映射的表名
+        table_name = 'sys_user'  # 自定义映射的表名
 
     # 也可以根据类名选择表的名称
     # class Meta:

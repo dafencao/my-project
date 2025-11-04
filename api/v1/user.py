@@ -18,7 +18,6 @@ from peewee import fn, IntegrityError
 from logic.user_logic import UserInfoLogic
 from schemas.request import sys_user_schema
 from common.session import db, get_db
-from datetime import datetime
 from utils.tools_func import rolePremission, tz
 
 router = APIRouter()

@@ -46,11 +46,28 @@ class userroleQuery(BaseModel):
 
 # # 创建账号需要验证的条件
 class UserroleCreate(BaseModel):
-
-    roleCode: str
-    createBy: str
-    roleName: str
-    description: str
+    role_name: str = Field(
+        ...,  # 必传字段
+        max_length=30,
+        description="角色名称(非空,最长30字符)"
+    )
+    role_key: str = Field(
+        ...,
+        max_length=100,
+        description="角色权限字符串(非空,最长100字符,如 'admin' 'user')"
+    )
+    data_scope: str = Field(
+        ...,
+        max_length=1,
+        pattern=r'^[1-9]$',  # 假设数据范围为 1-9 的数字字符（可根据实际业务调整）
+        description="数据范围(非空,如 '1'=全权限、'2'=自定义、'3'=本部门等)"
+    )
+    status: str = Field(
+        '0',  # 默认值：正常
+        max_length=1,
+        pattern=r'^[01]$',
+        description="角色状态(0=正常,1=禁用,默认0)"
+    )
 
 
 class UserroleUpdate(BaseModel):

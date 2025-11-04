@@ -108,16 +108,29 @@ class Userrole(BaseModel):
     """
     角色表 
     """
+    # 角色ID：自增主键，对应 bigint 类型
+    role_id = IntegerField(primary_key=True, verbose_name="角色ID")
+    # 角色名称：varchar(30)，非空
+    role_name = CharField(max_length=30, null=False, verbose_name="角色名称")
+    # 角色权限字符串：varchar(100)，非空
+    role_key = CharField(max_length=100, null=False, verbose_name="角色权限字符串")
+    # 数据范围：char(1)，如 '1' 全权限、'2' 自定义等，非空
+    data_scope = CharField(max_length=1, null=False, verbose_name="数据范围")
+    # 角色状态：char(1)，'0' 正常、'1' 禁用，非空
+    status = CharField(max_length=1, null=False, default='0', verbose_name="角色状态")
+    # 删除标志：char(1)，'0' 未删除、'1' 已删除，非空
+    del_flag = CharField(max_length=1, null=False, default='0', verbose_name="删除标志")
 
-    id = IntegerField(primary_key=True)  # id
-    roleCode = CharField(column_name='role_code')  # 角色编码
-    roleName = CharField(column_name='role_name')  # 角色名称
-    updateBy = CharField(column_name='update_by')  # 更新人
-    createBy = CharField(column_name='create_by')
-    description = CharField()
+
+    # id = IntegerField(primary_key=True)  # id
+    # roleCode = CharField(column_name='role_code')  # 角色编码
+    # roleName = CharField(column_name='role_name')  # 角色名称
+    # updateBy = CharField(column_name='update_by')  # 更新人
+    # createBy = CharField(column_name='create_by')
+    # description = CharField()
 
     class Meta:
-        table_name = 'role'  # 自定义映射的表名
+        table_name = 'sys_role'  # 自定义映射的表名
         legacy_table_names = False
 
     # 也可以根据类名选择表的名称
@@ -172,7 +185,7 @@ class Userrole(BaseModel):
     @classmethod
     async def query_role_perm_by_role_id(cls, roleId):
         db =await async_db.execute( Userrole.select(
-            Userrole.id,
+            Userrole.role_id,
             fn.group_concat(Permission.url)
             .python_value(convert_arr)
             .alias('perm')
