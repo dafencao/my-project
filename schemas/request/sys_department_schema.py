@@ -52,7 +52,7 @@ class DepartmentBase(BaseModel):
     # name: Optional[str] = ''
     # code: Optional[str] = ''
     # sort:Optional[int]
-    create_time: Optional[datetime] = None
+    create_at: Optional[datetime] = None
     
 class DepartmentUpdate(BaseModel):
     dept_id: Optional[int] = None
@@ -83,14 +83,12 @@ class DepartmentUpdate(BaseModel):
         '0',  # 默认值：正常
         max_length=1,
         pattern=r'^[01]$',  # 仅允许 0（正常）/1（禁用）
-        description="部门状态(0=正常1=禁用默认0)"
     )
-    update_time: Optional[datetime] = None
+    update_at: Optional[datetime] = None
 
 class DepartmentQuery(BaseModel):
-    code: Optional[str] = ''
-    name: Optional[str] = ''
-    # current: int= 1
-    # pageSize: int = 5
+    dept_id: Optional[int] = None
+    parent_id: Optional[int] = None
+
 class DepartmentDelete(BaseModel):
-    id: Optional[int]
+    dept_id: Optional[int]

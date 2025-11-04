@@ -1,9 +1,9 @@
 
 from typing import Any
-from datetime import timedelta, datetime
+from datetime import  datetime
 
 import pytz
-from fastapi import APIRouter, Depends, HTTPException, Form
+from fastapi import APIRouter, Depends,  Form
 from common.session import get_db
 
 from core import security
@@ -21,7 +21,7 @@ router = APIRouter()
 async def add_department(
     department: sys_department_schema.DepartmentBase
 ) -> Any:
-    department.create_time=datetime.strftime(
+    department.create_at=datetime.strftime(
         datetime.now(pytz.timezone('Asia/Shanghai')), '%Y-%m-%d %H:%M:%S')
 
     try:
@@ -51,7 +51,7 @@ async def del_department(
 async def edit_department(
     department: sys_department_schema.DepartmentUpdate,
 ) -> Any:
-    department.update_time = datetime.strftime(
+    department.update_at = datetime.strftime(
         datetime.now(pytz.timezone('Asia/Shanghai')), '%Y-%m-%d %H:%M:%S')
     # print(department)
     department = dict(department)
@@ -76,4 +76,15 @@ async def show_department(querydepartment: sys_department_schema.DepartmentQuery
     except Exception as e:
         print(e)
         return resp.fail(resp.DataNotFound, detail=str(e))
-    pass
+    
+
+@router.get("/sys/department/showall",summary='查询所有部门',name='查询所有部门')
+async def get_all_departments() -> Any:
+    """获取所有部门"""
+    try:
+        result = await Department.select_all()
+        # print(f"查询到 {len(result)} 个部门")
+        return resp.ok(data=result)
+    except Exception as e:
+        print(f"查询所有部门失败: {e}")
+        return resp.fail(resp.DataNotFound, detail=str(e))

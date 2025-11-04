@@ -6,7 +6,7 @@ from common.session import BaseModel, paginator, db, async_db
 from peewee import CharField, IntegerField, BigAutoField,BigIntegerField,DateTimeField
 from playhouse.shortcuts import model_to_dict, dict_to_model
 from sqlalchemy.orm import relationship
-from peewee import fn, JOIN
+from peewee import fn, SQL
 import time
 from utils.tools_func import convert_arr, convert_num_arr
 from datetime import datetime
@@ -33,8 +33,8 @@ class Department(BaseModel):
     status = CharField(max_length=1, null=False, default='0', verbose_name="部门状态")
     # 删除标志：char(1)，'0' 表示未删除，'1' 表示已删除（非空）
     del_flag = CharField(max_length=1, null=False, default='0', verbose_name="删除标志")
-    create_time = DateTimeField(default=datetime.now(pytz.timezone('Asia/Shanghai')), verbose_name="创建时间")
-    update_time = DateTimeField(default=datetime.now(pytz.timezone('Asia/Shanghai')), verbose_name="创建时间")
+    # create_at = DateTimeField(default=datetime.now(pytz.timezone('Asia/Shanghai')), verbose_name="创建时间")
+    # update_at = DateTimeField(default=datetime.now(pytz.timezone('Asia/Shanghai')), verbose_name="创建时间")
 
 
     class Meta:
@@ -62,16 +62,53 @@ class Department(BaseModel):
         #
         return u
 
+    # @classmethod
+    # async def fuzzy_query(cls, querydepartment):
+    #     db = await async_db.execute(Department.select().where(Department.dept_id.contains(querydepartment['dept_id']),
+    #                                 Department.parent_id.contains(querydepartment['parent_id'])).order_by(Department.parent_id,Department.dept_id ).dicts())
+    #     result = list(db)
+    #     return result
+    # @classmethod
+    # async def select_all(cls):  # 获取
+    #     db = await async_db.execute(Department.select().dicts())
+    #     # 附加 iterator() 方法调用还可以减少内存消耗
+    #     return list(db)
     @classmethod
     async def fuzzy_query(cls, querydepartment):
-        db = await async_db.execute(Department.select().where(Department.code.contains(querydepartment['code']),
-                                       Department.name.contains(querydepartment['name'])).order_by(
-            Department.sort,Department.code ).dicts())
+        # 构建查询条件
+        conditions = []
+        
+        # 对于数字字段使用精确匹配
+        if 'dept_id' in querydepartment and querydepartment['dept_id'] is not None:
+            conditions.append(Department.dept_id == querydepartment['dept_id'])
+        
+        if 'parent_id' in querydepartment and querydepartment['parent_id'] is not None:
+            conditions.append(Department.parent_id == querydepartment['parent_id'])
+    
+        # 执行查询
+        if conditions:
+            db = await async_db.execute(
+                Department.select()
+                .where(*conditions)
+                .order_by(Department.parent_id, Department.dept_id)
+                .dicts()
+            )
+        else:
+            # 如果没有条件，返回所有数据
+            db = await async_db.execute(
+                Department.select()
+                .order_by(Department.parent_id, Department.dept_id)
+                .dicts()
+            )
+        
         result = list(db)
         return result
-    # Department.name == querydepartment['name']
+
     @classmethod
-    async def select_all(cls):  # 获取
-        db = await async_db.execute(Department.select().dicts())
-        # 附加 iterator() 方法调用还可以减少内存消耗
-        return list(db)
+    async def select_all(cls):  # 获取所有部门
+        # 优化：添加排序（与模糊查询保持一致），避免返回顺序混乱
+        query = cls.select().order_by(cls.parent_id, cls.dept_id).dicts()
+        db_result = await async_db.execute(query)
+        return list(db_result)
+    
+ 
