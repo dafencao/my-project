@@ -25,7 +25,7 @@ from common.session import db, async_db
 from core import security
 from fastapi import APIRouter, Depends, HTTPException, Form
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any,List
 from schemas.response import resp
 from schemas.request import sys_userrole_schema
 from models.user import UserRoleRelp, Userinfo
@@ -37,47 +37,35 @@ router = APIRouter()
 
 @router.post("/sys/role/add", summary="添加角色", name="新增一条用户记录")
 async def role_add(req: sys_userrole_schema.RoleCreate):
-    role = dict(req)
-    role['createAt'] = datetime.strftime(
+    permission_ids: List[int] = []
+    permission_ids = getattr(req, 'permissionIds') 
+    role = req.dict(exclude={'permissionIds'})
+    role['create_at'] = datetime.strftime(
         datetime.now(pytz.timezone('Asia/Shanghai')), '%Y-%m-%d %H:%M:%S')
-    role['updateAt'] = datetime.strftime(
+    role['update_at'] = datetime.strftime(
         datetime.now(pytz.timezone('Asia/Shanghai')), '%Y-%m-%d %H:%M:%S')
-    role['updateBy'] = role['createBy']
-    # print('role')
-    # print(role)
-    permList = []
-    # try:
-    #     result = await Permission.get_all_perm()
-    # except Exception as e:
-    #     return resp.fail(resp.DataStoreFail, detail=str(e))
-    # for item in result:
-    #     permList.append(item['id'])
-    # print('permList')
-    # print(permList)
+    
     try:
         async with db.atomic_async():
-            roleId =await Userrole.add_role(role)
-            for id in req.permissionIds:
-                # RoleMenuRelp.create(
-                #     roleId=roleId,
-                #     menuId=id)
-                await RoleMenuRelp.add({'roleId': roleId, 'menuId': id,'createAt':role['createAt']})
-            # for id in permList:
-                # RolePermRelp.create(
-                #     roleId=roleId,
-                #     permId=id)
-                # await RolePermRelp.add({'roleId': roleId, 'perm': id})
-
-            # print('roleId')
-            # print(roleId)
+            roleId = await Userrole.add_role(role)
+            print(roleId)
+            for m_id in permission_ids:
+                await RoleMenuRelp.add({'roleId': roleId, 'menuId': m_id,'create_at':role['create_at']})
         return resp.ok(data=roleId)
+        
+    
     except IntegrityError as e:
-        return resp.fail(resp.DataStoreFail.set_msg('角色编码已存在！'))
-        # return resp.ok( msg='角色编码已存在！' )
-
+        # 更精确地判断错误类型
+        error_msg = str(e).lower()
+        if 'unique' in error_msg or 'duplicate' in error_msg:
+            return resp.fail(resp.DataStoreFail.set_msg('角色编码已存在！'))
+        else:
+            return resp.fail(resp.DataStoreFail.set_msg('数据完整性错误'))
+    
     except Exception as e:
-        print(e)
-        return resp.fail(resp.DataStoreFail, detail=str(e))
+        print(f"添加角色失败: {e}")
+        return resp.fail(resp.DataStoreFail, detail=str(e))   
+
 
 
 @router.post("/sys/role/delete/{id}", summary="删除角色", name="删除角色")

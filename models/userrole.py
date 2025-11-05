@@ -25,11 +25,10 @@ class RoleMenuRelp(BaseModel):
     id = IntegerField(primary_key=True)
     roleId = IntegerField(column_name='role_id')
     menuId = IntegerField(column_name='menu_id')
-
     class Meta:
-        table_name = 'role_menu_relp'
+        table_name = 'sys_role_menu'
 
-    class Config:
+    class Config:   
         orm_mode = True
 
     @classmethod
@@ -228,7 +227,7 @@ class Userrole(BaseModel):
     @classmethod
     async def add_role(cls, userrole):  # 添加角色
         result = await async_db.create(Userrole,**userrole)
-        return result.id
+        return result.role_id
 
     @classmethod
     async def del_by_userroleid(cls, userroleid):  # 通过id删除信息
