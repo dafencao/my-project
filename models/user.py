@@ -254,11 +254,11 @@ class UserRoleRelp(BaseModel):
     用户角色关系表
     """
     id = IntegerField(primary_key=True)
-    userId = IntegerField(column_name='user_id')
-    roleId = IntegerField(column_name='role_id')
+    user_id = IntegerField(column_name='user_id')
+    role_id = IntegerField(column_name='role_id')
 
     class Meta:
-        table_name = 'user_role_relp'  # 自定义映射的表名
+        table_name = 'sys_user_role'  # 自定义映射的表名
 
     class Config:
         orm_mode = True
@@ -268,7 +268,7 @@ class UserRoleRelp(BaseModel):
     @classmethod
     async def select_by_userId(cls, userId):  # 添加
         result = await async_db.execute(
-            UserRoleRelp.select().where(UserRoleRelp.userId == userId).dicts())
+            UserRoleRelp.select().where(UserRoleRelp.user_id == userId).dicts())
         return list(result)
 
     @classmethod
@@ -279,12 +279,12 @@ class UserRoleRelp(BaseModel):
     @classmethod
     async def delete_by_userId(cls, id):  # 获取
         return await async_db.execute(
-            UserRoleRelp.delete().where(UserRoleRelp.userId == id))
+            UserRoleRelp.delete().where(UserRoleRelp.user_id == id))
 
     @classmethod
     async def delete_by_roleId(cls, id):  # 获取
         return await async_db.execute(
-            UserRoleRelp.delete().where(UserRoleRelp.roleId == id))
+            UserRoleRelp.delete().where(UserRoleRelp.role_id == id))
     @classmethod
     async def update_by_model(cls, model):  # 更新
         result = await async_db.execute(model.save())

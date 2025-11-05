@@ -5,7 +5,7 @@
 """
 
 from common.session import BaseModel, paginator, db, async_db
-from peewee import CharField, IntegerField, ForeignKeyField, TimeField
+from peewee import CharField, IntegerField, TimeField,DateTimeField
 from playhouse.shortcuts import model_to_dict, dict_to_model
 from sqlalchemy.orm import relationship
 
@@ -23,8 +23,8 @@ class RoleMenuRelp(BaseModel):
     角色菜单关系表/权限表
     """
     id = IntegerField(primary_key=True)
-    roleId = IntegerField(column_name='role_id')
-    menuId = IntegerField(column_name='menu_id')
+    role_id = IntegerField(column_name='role_id')
+    menu_id = IntegerField(column_name='menu_id')
     class Meta:
         table_name = 'sys_role_menu'
 
@@ -35,7 +35,7 @@ class RoleMenuRelp(BaseModel):
     async def select_by_role_id(cls, id: int):  # 通过id查询用户信息
         db =  await async_db.execute(RoleMenuRelp.select(
             RoleMenuRelp.roleId,
-            fn.group_concat(RoleMenuRelp.menuId).python_value(convert_num_arr).alias('menuIds')).where(RoleMenuRelp.roleId == id).group_by(RoleMenuRelp.roleId).dicts())
+            fn.group_concat(RoleMenuRelp.menu_id).python_value(convert_num_arr).alias('menuIds')).where(RoleMenuRelp.role_id == id).group_by(RoleMenuRelp.roleId).dicts())
         # result = list(db)[0]
         if db:
 
@@ -51,7 +51,7 @@ class RoleMenuRelp(BaseModel):
         return result.id
     @classmethod
     async def delete_by_roleId(cls, id):
-        return await async_db.execute(RoleMenuRelp.delete().where(RoleMenuRelp.roleId == id))
+        return await async_db.execute(RoleMenuRelp.delete().where(RoleMenuRelp.role_id == id))
 
     @classmethod
     async def delete_by_roleId_and_menuId(cls, roleId,menuId):
@@ -60,13 +60,12 @@ class Permission(BaseModel):
     """
     权限表 
     """
-    id = IntegerField(primary_key=True)  # id
-    url = CharField()  # 权限名称
-    # name = CharField( )  # 权限名称
-    description = CharField()  # 权限名称
+    perm_id = IntegerField(primary_key=True)  # id
+    perm_key = CharField(max_length=100, null=False, unique=True, verbose_name="权限字符串(如 sys:user:add)")
+    data_scope = CharField(max_length=1, null=False, verbose_name="数据范围(1-全部,2-本部门,3-本人)")
 
     class Meta:
-        table_name = 'permission'  # 自定义映射的表名
+        table_name = 'sys_permission'  # 自定义映射的表名
 
     class Config:
         orm_mode = True
@@ -81,11 +80,11 @@ class Permission(BaseModel):
 class RolePermRelp(BaseModel):
 
     id = IntegerField(primary_key=True)  # id
-    roleId = IntegerField(column_name='role_id')  # id
-    permId = IntegerField(column_name='perm_id')  # id
+    role_id = IntegerField(null=False, verbose_name="角色ID关联 (sys_role.role_id)")
+    perm_id = IntegerField(null=False, verbose_name="权限ID关联 (sys_permission.perm_id)")
 
     class Meta:
-        table_name = 'role_perm_relp'  # 自定义映射的表名
+        table_name = 'sys_role_permission'  # 自定义映射的表名
 
     class Config:
         orm_mode = True
@@ -101,7 +100,7 @@ class RolePermRelp(BaseModel):
         return result.id
     @classmethod
     async def delete_by_roleId(cls, id):
-        return await async_db.execute(RolePermRelp.delete().where(RolePermRelp.roleId == id))
+        return await async_db.execute(RolePermRelp.delete().where(RolePermRelp.role_id == id))
 
 class Userrole(BaseModel):
     """
@@ -111,14 +110,12 @@ class Userrole(BaseModel):
     role_id = IntegerField(primary_key=True, verbose_name="角色ID")
     # 角色名称：varchar(30)，非空
     role_name = CharField(max_length=30, null=False, verbose_name="角色名称")
-    # 角色权限字符串：varchar(100)，非空
-    role_key = CharField(max_length=100, null=False, verbose_name="角色权限字符串")
-    # 数据范围：char(1)，如 '1' 全权限、'2' 自定义等，非空
-    data_scope = CharField(max_length=1, null=False, verbose_name="数据范围")
     # 角色状态：char(1)，'0' 正常、'1' 禁用，非空
     status = CharField(max_length=1, null=False, default='0', verbose_name="角色状态")
     # 删除标志：char(1)，'0' 未删除、'1' 已删除，非空
     del_flag = CharField(max_length=1, null=False, default='0', verbose_name="删除标志")
+    update_at = DateTimeField
+    create_at = DateTimeField
 
 
     # id = IntegerField(primary_key=True)  # id
@@ -203,25 +200,30 @@ class Userrole(BaseModel):
     @classmethod
     async def fuzzy_query(cls, queryuserrole):
 
-        # fn.abs(userinfo.full_pressure - queryUser.full_pressure).alias('count')
-
-        db = await async_db.execute(Userrole.select().where(
-            Userrole.roleCode.contains(queryuserrole.roleCode),
-            Userrole.roleName.contains(queryuserrole.roleName)
-        ).order_by(Userrole.updateAt.desc(),Userrole.createAt.desc()).dicts())
-
-        # .order_by(
-        #     # fn.abs(User.flow_rate-queryUser.flowRate),
-        # )
-        # db = db.offset((queryuserrole.current - 1) *
-        #                queryuserrole.pageSize).limit(queryuserrole.pageSize)
+        conditions = []
+    
+        # 角色名称模糊查询
+        if hasattr(queryuserrole, 'role_name') and queryuserrole.role_name:
+            conditions.append(Userrole.role_name.contains(queryuserrole.role_name))
+        
+        # 执行查询
+        query = Userrole.select().where(*conditions).order_by(
+            Userrole.update_at.desc,
+            Userrole.create_at.desc
+        )
+    
+        # 添加分页（如果请求中有分页参数）
+        if hasattr(queryuserrole, 'current') and hasattr(queryuserrole, 'pageSize'):
+            query = query.offset((queryuserrole.current - 1) * queryuserrole.pageSize).limit(queryuserrole.pageSize)
+        
+        db = await async_db.execute(query.dicts())
         print("查找结果", db)
         return list(db)
 
     @classmethod
-    async def select_all(cls):  # 通过id删除信息
-        db =await async_db.execute( Userrole.select(Userrole.id, Userrole.roleName,
-                             Userrole.roleCode).dicts())
+    async def select_all(cls):  # 查看所有的角色
+        db =await async_db.execute( Userrole.select(Userrole.role_id, Userrole.role_name,
+                             Userrole.status).dicts())
         return list(db)
 
     @classmethod
@@ -231,7 +233,7 @@ class Userrole(BaseModel):
 
     @classmethod
     async def del_by_userroleid(cls, userroleid):  # 通过id删除信息
-        await async_db.execute(Userrole.delete().where(Userrole.id ==
+        await async_db.execute(Userrole.delete().where(Userrole.role_id ==
                                 userroleid) )
 
     @classmethod
@@ -245,13 +247,22 @@ class Userrole(BaseModel):
         # 字典结构更新userrole数据
         # print(userrole)
         return await async_db.update(userrole)
+    
     @classmethod
-    async def select_by_id(cls, id: str):  # 通过id查询用户信息
-        result =await async_db.execute( Userrole.select().where(Userrole.id == id))
-        print('result')
-        print(result)
-        result=result[0]
-        return result
+    async def select_by_id(cls, id: int):  # 通过id查询用户信息
+        try:
+        # 方法1：使用dicts()获取字典结果
+            query = Userrole.select().where(Userrole.role_id == id)
+            result = await async_db.execute(query.dicts())
+            
+            if result and len(result) > 0:
+                return result[0]  # 返回第一条记录
+            else:
+                return None
+            
+        except Exception as e:
+            print(f"查询角色失败: {e}")
+            return None
 
     @classmethod
     async def single_by_roleName(cls, roleName: str):  # 通过用户名查找用户

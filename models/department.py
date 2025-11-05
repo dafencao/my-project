@@ -62,17 +62,6 @@ class Department(BaseModel):
         #
         return u
 
-    # @classmethod
-    # async def fuzzy_query(cls, querydepartment):
-    #     db = await async_db.execute(Department.select().where(Department.dept_id.contains(querydepartment['dept_id']),
-    #                                 Department.parent_id.contains(querydepartment['parent_id'])).order_by(Department.parent_id,Department.dept_id ).dicts())
-    #     result = list(db)
-    #     return result
-    # @classmethod
-    # async def select_all(cls):  # 获取
-    #     db = await async_db.execute(Department.select().dicts())
-    #     # 附加 iterator() 方法调用还可以减少内存消耗
-    #     return list(db)
     @classmethod
     async def fuzzy_query(cls, querydepartment):
         # 构建查询条件

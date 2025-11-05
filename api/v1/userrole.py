@@ -48,9 +48,8 @@ async def role_add(req: sys_userrole_schema.RoleCreate):
     try:
         async with db.atomic_async():
             roleId = await Userrole.add_role(role)
-            print(roleId)
             for m_id in permission_ids:
-                await RoleMenuRelp.add({'roleId': roleId, 'menuId': m_id,'create_at':role['create_at']})
+                await RoleMenuRelp.add({'role_id': roleId, 'menu_id': m_id,'create_at':role['create_at']})
         return resp.ok(data=roleId)
         
     
@@ -68,20 +67,14 @@ async def role_add(req: sys_userrole_schema.RoleCreate):
 
 
 
-@router.post("/sys/role/delete/{id}", summary="删除角色", name="删除角色")
+@router.post("/sys/role/delete/{role_id}", summary="删除角色", name="删除角色")
 async def del_user(
-        id: str
+        id: int
 ) -> Any:
     print(id)
     try:
         async with db.atomic_async():
-            result =await Userrole.del_by_userroleid(id)
-            # print(list(Userinfo.select().where(Userinfo.userRoleId==id).dicts()))
-
-            await async_db.execute(Userinfo.update(userRoleId=None).where(Userinfo.userRoleId == id))
-            # UserRoleRelp.delete().where(UserRoleRelp.roleId == id).execute()
-            # RoleMenuRelp.delete().where(RoleMenuRelp.roleId == id).execute()
-            # RolePermRelp.delete().where(RolePermRelp.roleId == id).execute()
+            await Userrole.del_by_userroleid(id)
             await UserRoleRelp.delete_by_roleId(id)
             await RoleMenuRelp.delete_by_roleId(id)
             await RolePermRelp.delete_by_roleId(id)
@@ -107,14 +100,8 @@ async def query_all() -> Any:
 
 @router.post("/role/show", summary="任意字段筛选角色记录", name="任意字段筛选角色记录")
 async def show_userrole(req: sys_userrole_schema.userroleQuery) -> Any:
-    print('show req')
-    print(req)
-    item_dict = dict(req)
     try:
         result =await  Userrole.fuzzy_query(req)
-        # print('这是全部角色')
-        # print(result)
-        # print(len(result))
         total = len(result)
         current = int(req.current)
         pageSize = int(req.pageSize)
@@ -126,18 +113,17 @@ async def show_userrole(req: sys_userrole_schema.userroleQuery) -> Any:
     except Exception as e:
         print(e)
         return resp.fail(resp.DataNotFound, detail=str(e))
-    pass
 
 
 @router.get("/sys/role/queryById", summary="根据id查看角色详细信息", name="查询角色详情")
-async def query_user_id(id: str):
-    result =await  Userrole.select_by_id(id)
-    print(result)
+async def query_user_id(id: int):
+    result = await Userrole.select_by_id(id)
+    print(f"查询结果: {result}")
     if result:
         return resp.ok(data=result)
     else:
         raise HTTPException(
-            status_code=404, detail="User not found")
+            status_code=404, detail="角色不存在")
 
 
 @router.get("/sys/permission/queryRolePermission/{roleId}", summary="根据id查看角色详细信息", name="查询角色详情")

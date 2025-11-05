@@ -34,9 +34,7 @@ class userroleBase(BaseModel):
 
 
 class userroleQuery(BaseModel):
-
-    roleName: Optional[str] = ''
-    roleCode: Optional[str] = ''
+    role_name: Optional[str] = ''
     current: int = 1  # 页码
     pageSize: int = 10  # 每页条数
 
@@ -72,18 +70,7 @@ class RoleCreate(BaseModel):
         ...,  # 必传字段
         max_length=30,
         description="角色名称(非空,最长30字符)"
-    )
-    role_key: str = Field(
-        ...,
-        max_length=100,
-        description="角色权限字符串(非空,最长100字符,如 'admin' 'user')"
-    )
-    data_scope: str = Field(
-        ...,
-        max_length=1,
-        pattern=r'^[1-9]$',  # 假设数据范围为 1-9 的数字字符（可根据实际业务调整）
-        description="数据范围非空,如 '1'=全权限、'2'=自定义、'3'=本部门等"
-    )
+    )   
     status: str = Field(
         '0',  # 默认值：正常
         max_length=1,
