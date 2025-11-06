@@ -81,15 +81,14 @@ class RoleCreate(BaseModel):
 
 
 class RoleUpdate(BaseModel):
-    id: Optional[int]
-    description: Optional[str] = ''
-    roleCode: Optional[str]
-    roleName: Optional[str]
-    updateBy:  Optional[str]
-    updateAt: datetime = None
+    role_id: Optional[int]
+    role_name: Optional[str]
+    status: Optional[str]
+    update_at: datetime = None
+
 
 
 class RoleMenuPerm(BaseModel):
-    lastpermissionIds: List[int]
-    permissionIds: List[int]
-    roleId: Optional[int]
+    lastmenu_id: List[int]
+    menu_id: List[int]
+    role_id: Optional[int]

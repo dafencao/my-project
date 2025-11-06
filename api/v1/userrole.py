@@ -149,8 +149,8 @@ async def get_role_all_permissions(role_id: int):
         
         # 并行执行两个查询
         menu_result, permission_result = await asyncio.gather(
-            RoleMenuRelp.select_menus_by_role_id(role_id),
-            RoleMenuRelp.select_permissions_by_role_id(role_id),
+            RoleMenuRelp.selectMenu_by_role_id(role_id),
+            RolePermRelp.selectPermission_by_role_id(role_id),
             return_exceptions=True  # 防止一个查询失败影响另一个
         )
         
@@ -169,12 +169,8 @@ async def get_role_all_permissions(role_id: int):
         
         return {
             "role_id": role_id,
-            "menu_permissions": menu_result.get('menu_ids', []),
-            "function_permissions": permission_result.get('permission_ids', []),
-            "all_permissions": {
-                "menus": menu_result.get('menu_ids', []),
-                "permissions": permission_result.get('permission_ids', [])
-            }
+            "menu_ids": menu_result.get('menu_ids', []),
+            "perm_ids": permission_result.get('perm_ids', []),
         }
         
     except HTTPException:
@@ -191,7 +187,7 @@ async def role_update(req: sys_userrole_schema.RoleUpdate):
     req = dict(req)
     # return resp.fail(resp.DataUpdateFail )
 
-    req['updateAt'] = datetime.strftime(
+    req['update_at'] = datetime.strftime(
         datetime.now(pytz.timezone('Asia/Shanghai')), '%Y-%m-%d %H:%M:%S')
     role = dict_to_model(Userrole, req)
     try:
@@ -206,29 +202,26 @@ async def role_update(req: sys_userrole_schema.RoleUpdate):
         return resp.fail(resp.DataUpdateFail, detail=str(e))
 
 
-@router.post("/sys/permission/saveRolePermission", summary="保存角色的权限。", name="保存角色的权限。")
+@router.post("/sys/permission/saveRoleMenu", summary="新增角色的菜单权限。", name="新增角色的菜单权限。")
 async def saveRolePermission(req: sys_userrole_schema.RoleMenuPerm):
     try:
         async with db.atomic_async():
-            for id in req.permissionIds:
-                if id not in req.lastpermissionIds:
-                    # RoleMenuRelp.create(
-                    #     roleId=req.roleId,
-                    #     menuId=id)
-                    await RoleMenuRelp.add({'roleId': req.roleId, 'menuId': id})
-            for id in req.lastpermissionIds:
-                if id not in req.permissionIds:
-                    # print('delete')
-                    # print(id)
-                    # print('req.roleId')
-                    # print(req.roleId)
-                    # result = list(RoleMenuRelp.select().where(RoleMenuRelp.roleId ==
-                    #                                           req.roleId, RoleMenuRelp.menuId == id).dicts())
-                    # print(result)
-                    # result = RoleMenuRelp.delete().where(RoleMenuRelp.roleId ==
-                    #                                      req.roleId, RoleMenuRelp.menuId == id).execute()
-                    result = await RoleMenuRelp.delete_by_roleId_and_menuId(req.roleId, id)
-                    print(result)
+            # 添加新的菜单权限
+            for menu_id in req.menu_id:
+                if menu_id not in req.lastmenu_id:
+                    await RoleMenuRelp.add({
+                        'role_id': req.role_id,  # 统一使用下划线
+                        'menu_id': menu_id
+                    })
+            
+            # 删除不再需要的菜单权限
+            for menu_id in req.lastmenu_id:
+                if menu_id not in req.menu_id:
+                    result = await RoleMenuRelp.delete_by_roleId_and_menuId(
+                        req.role_id, menu_id
+                    )
+                    print(f"删除结果: {result}")
+            
             return resp.ok()
     except Exception as e:
         return resp.fail(resp.DataUpdateFail, detail=str(e))

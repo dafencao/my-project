@@ -38,8 +38,8 @@ class RoleMenuRelp(BaseModel):
             fn.group_concat(RoleMenuRelp.menu_id).python_value(convert_num_arr).alias('menu_ids')).where(RoleMenuRelp.role_id == role_id).group_by(RoleMenuRelp.role_id).dicts())
         if db:
 
-            result = list(db)[0]
-            return result
+            result2 = list(db)[0]
+            return result2
         else:
             return {'role_id': role_id, 'menu_ids': []}
 
@@ -53,8 +53,9 @@ class RoleMenuRelp(BaseModel):
         return await async_db.execute(RoleMenuRelp.delete().where(RoleMenuRelp.role_id == id))
 
     @classmethod
-    async def delete_by_roleId_and_menuId(cls, roleId,menuId):
-        return await async_db.execute(RoleMenuRelp.delete().where(RoleMenuRelp.roleId == roleId,RoleMenuRelp.menuId==menuId))
+    async def delete_by_roleId_and_menuId(cls, role_id,menu_id):
+        return await async_db.execute(RoleMenuRelp.delete().where(RoleMenuRelp.role_id == role_id,RoleMenuRelp.menu_id==menu_id))
+    
 class Permission(BaseModel):
     """
     权限表 
@@ -96,10 +97,23 @@ class RolePermRelp(BaseModel):
     @classmethod
     async def add(cls, relp: dict):
         result = await async_db.create(RoleMenuRelp, **relp)
+
         return result.id
     @classmethod
     async def delete_by_roleId(cls, id):
         return await async_db.execute(RolePermRelp.delete().where(RolePermRelp.role_id == id))
+    
+    @classmethod
+    async def selectPermission_by_role_id(cls, role_id: int):  # 通过id查询用户权限id
+        db =  await async_db.execute(RolePermRelp.select(
+            RolePermRelp.perm_id,
+            fn.group_concat(RolePermRelp.perm_id).python_value(convert_num_arr).alias('perm_ids')).where(RolePermRelp.role_id == role_id).group_by(RolePermRelp.role_id).dicts())
+        if db:
+
+            result1 = list(db)[0]
+            return result1 
+        else:
+            return {'role_id': role_id, 'perm_ids': []}
 
 class Userrole(BaseModel):
     """
