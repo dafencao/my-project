@@ -32,19 +32,18 @@ class RoleMenuRelp(BaseModel):
         orm_mode = True
 
     @classmethod
-    async def select_by_role_id(cls, id: int):  # 通过id查询用户信息
+    async def selectMenu_by_role_id(cls, role_id: int):  # 通过id查询用户信息
         db =  await async_db.execute(RoleMenuRelp.select(
-            RoleMenuRelp.roleId,
-            fn.group_concat(RoleMenuRelp.menu_id).python_value(convert_num_arr).alias('menuIds')).where(RoleMenuRelp.role_id == id).group_by(RoleMenuRelp.roleId).dicts())
-        # result = list(db)[0]
+            RoleMenuRelp.role_id,
+            fn.group_concat(RoleMenuRelp.menu_id).python_value(convert_num_arr).alias('menu_ids')).where(RoleMenuRelp.role_id == role_id).group_by(RoleMenuRelp.role_id).dicts())
         if db:
 
             result = list(db)[0]
             return result
         else:
-            return {'roleId': id, 'menuIds': []}
-        # print(result)
-        # return result
+            return {'role_id': role_id, 'menu_ids': []}
+
+
     @classmethod
     async def add(cls, relp:dict):
         result = await async_db.create(RoleMenuRelp,**relp)

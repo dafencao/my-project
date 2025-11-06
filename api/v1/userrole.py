@@ -23,7 +23,7 @@ from models.userrole import Permission, RoleMenuRelp, RolePermRelp, Userrole
 from common import deps, logger
 from common.session import db, async_db
 from core import security
-from fastapi import APIRouter, Depends, HTTPException, Form
+from fastapi import APIRouter, Depends, HTTPException, Form,HTTPException, status
 from datetime import datetime, timedelta
 from typing import Any,List
 from schemas.response import resp
@@ -31,6 +31,7 @@ from schemas.request import sys_userrole_schema
 from models.user import UserRoleRelp, Userinfo
 from playhouse.shortcuts import model_to_dict, dict_to_model
 from peewee import fn, IntegrityError
+import asyncio
 
 router = APIRouter()
 
@@ -115,7 +116,7 @@ async def show_userrole(req: sys_userrole_schema.userroleQuery) -> Any:
         return resp.fail(resp.DataNotFound, detail=str(e))
 
 
-@router.get("/sys/role/queryById", summary="根据id查看角色详细信息", name="查询角色详情")
+@router.get("/sys/role/queryById", summary="根据角色id查看角色详细信息", name="查询角色详情")
 async def query_user_id(id: int):
     result = await Userrole.select_by_id(id)
     print(f"查询结果: {result}")
@@ -126,22 +127,63 @@ async def query_user_id(id: int):
             status_code=404, detail="角色不存在")
 
 
-@router.get("/sys/permission/queryRolePermission/{roleId}", summary="根据id查看角色详细信息", name="查询角色详情")
-async def queryRolePermission(roleId: int):
-    result = await  RoleMenuRelp.select_by_role_id(roleId)
-    print('result')
-    print(result)
-    if result:
-        return resp.ok(data=result)
-    else:
-        result = {
-            'menuIds': [],
-            'roleId': roleId
-        }
-        return resp.ok(data=result)
-
+@router.get("/sys/permission/queryRoleMenu/{role_id}", summary="根据角色id查看角色权限和菜单", name="查询角色详情")
+async def get_role_all_permissions(role_id: int):
+    # try:
+    #     result = await RoleMenuRelp.selectMenu_by_role_id(role_id)
+    #     return result
+    # except Exception as e:
     #     raise HTTPException(
-    #         status_code=404, detail="role not found")
+    #         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+    #         detail=f"查询角色菜单失败: {str(e)}"
+    #     )
+    """
+    获取角色的所有权限信息（菜单 + 权限）
+    """
+    try:
+        if role_id <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="角色ID必须大于0"
+            )
+        
+        # 并行执行两个查询
+        menu_result, permission_result = await asyncio.gather(
+            RoleMenuRelp.select_menus_by_role_id(role_id),
+            RoleMenuRelp.select_permissions_by_role_id(role_id),
+            return_exceptions=True  # 防止一个查询失败影响另一个
+        )
+        
+        # 处理异常
+        if isinstance(menu_result, Exception):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"查询菜单权限失败: {str(menu_result)}"
+            )
+        
+        if isinstance(permission_result, Exception):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"查询功能权限失败: {str(permission_result)}"
+            )
+        
+        return {
+            "role_id": role_id,
+            "menu_permissions": menu_result.get('menu_ids', []),
+            "function_permissions": permission_result.get('permission_ids', []),
+            "all_permissions": {
+                "menus": menu_result.get('menu_ids', []),
+                "permissions": permission_result.get('permission_ids', [])
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取角色权限失败: {str(e)}"
+        )
 
 
 @router.post("/sys/role/edit", summary="角色更新", name="角色更新")
