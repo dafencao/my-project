@@ -4,7 +4,7 @@ from typing import Any
 from datetime import timedelta, datetime
 
 import pytz
-from fastapi import APIRouter, Depends, HTTPException, Form
+from fastapi import APIRouter, Depends, HTTPException, Form, Body
 
 from common.deps import verify_current_user_perm
 from common.session import get_db
@@ -20,26 +20,25 @@ from peewee import fn
 router = APIRouter()
 
 
-@router.post("/sys/permission/add", summary="添加菜单", name="添加菜单")
+@router.post("/sys/menu/add", summary="添加菜单", name="添加菜单")
 async def add_usermenu_info(
     menu: sys_usermenu_schema.MenuCreate
 ) -> Any:
+    try:
+        menu.create_at = datetime.strftime(
+            datetime.now(pytz.timezone('Asia/Shanghai')), '%Y-%m-%d %H:%M:%S')
+        menu_dict = dict(menu)
+        result = await Usermenu.add_usermenu(menu_dict)
+        return resp.ok(data=result)
+        
+    except Exception as e:
+        return resp.fail(resp.DataInsertFail, detail=f"添加菜单失败: {str(e)}")
 
-    menu.createAt = datetime.strftime(
-        datetime.now(pytz.timezone('Asia/Shanghai')), '%Y-%m-%d %H:%M:%S')
-    # menu = dict_to_model(Usermenu, dict(usermenu))
 
-    menu = dict(menu)
-    # print(menu)
-    result =await Usermenu.add_usermenu(menu)
-    return resp.ok(data=result)
-
-
-@router.delete("/sys/permission/delete", summary="删除菜单", name="删除菜单")
+@router.delete("/sys/menu/delete", summary="删除菜单", name="删除菜单")
 async def del_usermenu(
-    id: str
+    id: int
 ) -> Any:
-    # print(id)
     try:
         result =await Usermenu.del_by_usermenu_id(id)
     except Exception as e:
@@ -48,14 +47,23 @@ async def del_usermenu(
     return resp.ok(data=result)
 
 
-@router.delete("/sys/permission/deleteBatch", summary="批量删除菜单", name="批量删除菜单")
+@router.delete("/sys/menu/deleteBatch", summary="批量删除菜单", name="批量删除菜单")
 async def del_usermenu(
     usermenu_ids: list
 ) -> Any:
-    print(usermenu_ids)
+    try:
+        # 转换为整数
+        menu_ids = [int(id) for id in usermenu_ids]
 
-    result =await Usermenu.del_by_usermenu_ids(usermenu_ids)
-    return resp.ok(data=result)
+        # 执行删除操作
+        result = await Usermenu.del_by_usermenu_ids(menu_ids)
+        
+        # 检查删除结果
+        if result == 0:
+            return {"success": True, "code": 200, "data": result, "msg": f"成功删除 {result} 个菜单"}
+        
+    except Exception as e:
+        return {"success": False, "code": 500, "msg": f"删除失败: {str(e)}", "data": None}
 
 
 @router.put("/sys/permission/edit", summary="编辑菜单", name="编辑菜单")

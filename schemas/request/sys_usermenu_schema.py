@@ -33,21 +33,18 @@ Pydantic 模型
 
 class MenuBase(BaseModel):
     # id:Optional[int] = "" #add时id一般为自增唯一字段不需要前端传
-    parentId: Optional[int] = None
-    name: Optional[str] = ""
-    menuType: Optional[int] = 1
-    icon: Optional[str] = ""
-    description: Optional[str] = ""
-    componentName: Optional[str] = ""
-    component: Optional[str] = ""
-    permsType: Optional[str] = "1"
-    route: Optional[bool] = True
-    sortNo: Optional[int] = None
-    url: Optional[str] = ""
-    status: Optional[str] = "1"
-    keepAlive: Optional[bool] = False
-    leaf: bool = True
-    redirect: Optional[str] = ""
+    menu_name: str = Field(..., max_length=50, description="菜单名称（必填）")
+    parent_id: Optional[int] = Field(None, description="父菜单ID(为空表示一级菜单)")
+    order_num: int = Field(..., description="显示顺序（必填）")
+    path: Optional[str] = Field(None, max_length=200, description="路由地址")
+    component: Optional[str] = Field(None, max_length=255, description="组件路径")
+    query: Optional[str] = Field(None, max_length=255, description="路由参数")
+    is_cache: int = Field(0, ge=0, le=1, description="是否缓存(0-不缓存,1-缓存,默认0)")
+    menu_type: str = Field(..., pattern=r'^[MCF]$', description="菜单类型M(-目录,C-菜单,F-按钮)")
+    visible: str = Field("0", pattern=r'^[01]$', description="菜单状态(0-显示,1-隐藏,默认0)")
+    status: str = Field("0", pattern=r'^[01]$', description="状态(0-正常,1-禁用,默认0)")
+    perms: Optional[str] = Field(None, max_length=100, description="权限标识(如 sys:menu:add)")
+    icon: Optional[str] = Field(None, max_length=100, description="菜单图标")
     # create_at:Optional[str] = ""#add时create_at一般为后端更新字段 不需要前端传
 
 
@@ -59,27 +56,14 @@ class usermenuQuery(MenuBase):
 
 # TODO: 新增菜单接口接收参数如下 写新增菜单接口
 class MenuCreate(MenuBase):
-    parentId: Optional[int] = 0
+    create_at:datetime = None
 
-    # component: Optional[str] = ''
-    # icon: Optional[str] = ''
-    # keepAlive: bool = False
-    # menuType: Optional[int]
-    # name: Optional[EmailStr] = ''
-    # permsType: Optional[str] = '1'
-    # route: bool = True
-    # sortNo: Optional[int]
-    # status: Optional[str] = '1'
-    # url: Optional[str] = ''
-    # parentId: Optional[int] = None
-    createAt: Optional[datetime] = None
 
-    # description: Optional[str] = ''
 
 
 class MenuUpdate(BaseModel):
     id: Optional[int]
-    parentId: Optional[str] = None
+    parent_id: Optional[str] = None
     menuType: Optional[int]
     name: Optional[str]
     url: Optional[str]

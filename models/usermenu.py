@@ -3,7 +3,7 @@
 """
 
 from common.session import BaseModel, paginator, db, async_db
-from peewee import CharField, IntegerField, ForeignKeyField, TimeField, BooleanField
+from peewee import CharField, IntegerField,DateTimeField,BigAutoField,BigIntegerField
 from playhouse.shortcuts import model_to_dict, dict_to_model
 from sqlalchemy.orm import relationship
 from schemas.request import sys_usermenu_schema
@@ -15,28 +15,24 @@ class Usermenu(BaseModel):
     """
     用户菜单表 
     """
-    id = IntegerField(primary_key=True)
-    parentId = IntegerField(column_name='parent_id')  # 父级id
-    # roleId = CharField(column_name='role_id')  # 角色id
-    name = CharField()  # 菜单名称
-    menuType = IntegerField(column_name='menu_type')  # 类型（1：一级菜单，2：子菜单）
-    icon = CharField()  # 图标
-    description = CharField()  # 描述
-    componentName = CharField(column_name='component_name')  # 前端组件名称
-    component = CharField()  # 前端组件路径
-    permsType = CharField(column_name='perms_type')  # 权限策略
-    route = BooleanField()  # 是否是路由菜单
-    sortNo = IntegerField(column_name='sort_no')  # 菜单排序
-    url = CharField()  # 菜单路径
-    status = CharField()
-    keepAlive = BooleanField(column_name='keep_alive')  # 是否缓存路由
-    leaf = BooleanField()  # 是否是叶子节点
-    redirect = CharField()  # 菜单跳转地址
-    createBy = CharField(column_name='create_by')
-    updateBy = CharField(column_name='update_by')
+    menu_id = BigAutoField(primary_key=True, verbose_name="菜单ID(自增主键)")
+    menu_name = CharField(max_length=50, verbose_name="菜单名称")
+    parent_id = BigIntegerField( verbose_name="父菜单ID(为空表示一级菜单)")
+    order_num = IntegerField( verbose_name="显示顺序")
+    path = CharField(max_length=200, verbose_name="路由地址")
+    component = CharField(max_length=255, verbose_name="组件路径")
+    query = CharField(max_length=255, verbose_name="路由参数")
+    is_cache = IntegerField(default=0, verbose_name="是否缓存(0-不缓存,1-缓存)")
+    menu_type = CharField(max_length=1, verbose_name="菜单类型(M-目录,C-菜单,F-按钮)")
+    visible = CharField(max_length=1, default="0", verbose_name="菜单状态(0-显示,1-隐藏)")
+    status = CharField(max_length=1, default="0", verbose_name="状态(0-正常,1-禁用)")
+    perms = CharField(max_length=100, verbose_name="权限标识(如 sys:menu:add)")
+    icon = CharField(max_length=100, verbose_name="菜单图标")
+    create_time = DateTimeField(verbose_name="创建时间")
+    update_time = DateTimeField(verbose_name="更新时间")
 
     class Meta:
-        table_name = 'menu'  # 自定义映射的表名
+        table_name = 'sys_menu'  # 自定义映射的表名
 
     # 也可以根据类名选择表的名称
     # class Meta:
@@ -98,13 +94,13 @@ class Usermenu(BaseModel):
 
     @classmethod
     async def del_by_usermenu_id(cls, id):
-        return await async_db.execute(Usermenu.delete().where(Usermenu.id ==
+        return await async_db.execute(Usermenu.delete().where(Usermenu.menu_id ==
                                 id))
 
     @classmethod
     async def del_by_usermenu_ids(cls, usermenu_ids: list):
 
-        return await async_db.execute(Usermenu.delete().where(Usermenu.id.in_(usermenu_ids)))
+        return await async_db.execute(Usermenu.delete().where(Usermenu.menu_id.in_(usermenu_ids)))
 
 
 
