@@ -66,15 +66,15 @@ async def del_usermenu(
         return {"success": False, "code": 500, "msg": f"删除失败: {str(e)}", "data": None}
 
 
-@router.put("/sys/permission/edit", summary="编辑菜单", name="编辑菜单")
+@router.put("/sys/menu/edit", summary="编辑菜单", name="编辑菜单")
 async def edit_menu(
     menu: sys_usermenu_schema.MenuUpdate
 ) -> Any:
-    menu.updateAt = datetime.strftime(
+    menu.update_at = datetime.strftime(
         datetime.now(pytz.timezone('Asia/Shanghai')), '%Y-%m-%d %H:%M:%S')
     print(menu)
-    if menu.menuType == 1:
-        menu.parentId = 0
+    if menu.menu_type == 'M':
+        menu.parent_id = 0
     menu = dict_to_model(Usermenu,  dict(menu))
 
     try:
@@ -86,7 +86,7 @@ async def edit_menu(
     return resp.ok(data=result)
 
 
-@router.post("/sys/permission/list", summary="查询所有菜单", name="查询所有菜单",dependencies=[Depends(verify_current_user_perm)])
+@router.post("/sys/menu/list", summary="查询所有菜单", name="查询所有菜单",dependencies=[Depends(verify_current_user_perm)])
 async def show_user(req: sys_usermenu_schema.MenuQuery,) -> Any:
 
     result =await Usermenu.fuzzy_query(req)
@@ -158,11 +158,9 @@ async def show_user(req: sys_usermenu_schema.MenuQuery,) -> Any:
     #     return resp.fail(resp.DataNotFound )
 
 
-@router.get("/{roleId}", summary="根据roleid筛选角色的权限", name="查询角色权限")
-async def query_user_roleId(roleId: str):
-    result =await  Usermenu.select_by_roleId(roleId)
-
-    print(result)
+@router.get("/sys/menu/{role_id}", summary="根据roleid查看角色的菜单", name="查询角色菜单")
+async def query_user_roleId(role_id: str):
+    result =await  Usermenu.select_by_roleId(role_id)
     if result:
         return resp.ok(data=result)
     else:
@@ -182,47 +180,53 @@ async def query_user_roleId(roleId: str):
 #
 @router.get("/sys/role/queryTreeList", summary="查询所有的菜单", name="查询所有的菜单", dependencies=[Depends(get_db)])
 async def queryTreeList():
-    result = {}
-    db = await Usermenu.select_all()
-    if db:
-        menuList = list(db)
-    else:
-        menuList = []
-    menuList = sorted(menuList, key=lambda e: (e.__getitem__(
-        'menuType'),  e.__getitem__('sortNo')), reverse=False)
-    result['treeList'] = []
-    for menu in menuList:
-        if menu['parentId'] == None or menu['parentId'] == 0:
-            temp = {}
-            temp['key'] = menu['id']
-            temp['path'] = menu['url']
-            temp['component'] = menu['component']
-            temp['slotTitle'] = menu['name']
-            temp['icon'] = menu['icon']
+    try:
+        result = {}
+        db = await Usermenu.select_all()
+        if db:
+            menuList = list(db)
+        else:
+            menuList = []
+        menuList = sorted(menuList, key=lambda e: (e.__getitem__(
+            'menu_type'),  e.__getitem__('menu_id')), reverse=False)
+        result['treeList'] = []
+        for menu in menuList:
+            if menu['parent_id'] == None or menu['parent_id'] == 0:
+                temp = {}
+                temp['key'] = menu['menu_id']
+                temp['path'] = menu['path']
+                temp['component'] = menu['component']
+                temp['slotTitle'] = menu['menu_name']
+                temp['icon'] = menu['icon']
 
-            temp['children'] = []
-            result['treeList'].append(temp)
-    print("result['treeList']")
-    print(result['treeList'])
-    for menu in menuList:
-        if menu['parentId'] != None or menu['parentId'] != 0:
-            temp = {}
-            temp['key'] = menu['id']
-            temp['path'] = menu['url']
-            temp['component'] = menu['component']
-            temp['slotTitle'] = menu['name']
-            temp['icon'] = menu['icon']
+                temp['children'] = []
+                result['treeList'].append(temp)
+        for menu in menuList:
+            if menu['parent_id'] is not None and menu['parent_id'] != 0:
+                temp = {}
+                temp['key'] = menu['menu_id']
+                temp['path'] = menu['path']
+                temp['component'] = menu['component']
+                temp['slotTitle'] = menu['menu_name']
+                temp['icon'] = menu['icon']
 
-            for menu1 in result['treeList']:
-                if menu1['key'] == menu['parentId']:
-                    # print("menu1['id']")
-                    # print(menu1)
-                    menu1['children'].append(temp)
-                    break
+                # 查找父菜单
+                parent_found = False
+                for parent_menu in result['treeList']:
+                    if parent_menu['key'] == menu['parent_id']:
+                        parent_menu['children'].append(temp)
+                        parent_found = True
+                        break
+                
+                # 如果没找到父菜单，打印调试信息
+                if not parent_found:
+                    print(f"⚠️ 菜单 {menu['menu_id']} 的父菜单 {menu['parent_id']} 不存在于顶级菜单中")
+        
+        print("完整菜单树:", result['treeList'])
+        return resp.ok(data=result)  # 修正缩进
 
-    # print("result['treeList']")
-    # print(result['treeList'])
-    if result:
-        return resp.ok(data=result)
-    else:
+        # print("result['treeList']")
+        # print(result['treeList'])
+    except Exception as e:
+        print(f"查询菜单树失败: {e}")
         return resp.fail(resp.DataNotFound, detail=str(e))

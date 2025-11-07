@@ -62,17 +62,20 @@ class MenuCreate(MenuBase):
 
 
 class MenuUpdate(BaseModel):
-    id: Optional[int]
-    parent_id: Optional[str] = None
-    menuType: Optional[int]
-    name: Optional[str]
-    url: Optional[str]
-    component: Optional[str]
-
-    sortNo: Optional[int]
-    icon: Optional[str] = None
-
-    updateAt: Optional[datetime] =None
+    menu_id:int = Field(None,description='菜单id')
+    menu_name: str = Field(..., max_length=50, description="菜单名称（必填）")
+    parent_id: Optional[int] = Field(None, description="父菜单ID(为空表示一级菜单)")
+    order_num: int = Field(..., description="显示顺序（必填）")
+    path: Optional[str] = Field(None, max_length=200, description="路由地址")
+    component: Optional[str] = Field(None, max_length=255, description="组件路径")
+    query: Optional[str] = Field(None, max_length=255, description="路由参数")
+    is_cache: int = Field(0, ge=0, le=1, description="是否缓存(0-不缓存,1-缓存,默认0)")
+    menu_type: str = Field(..., pattern=r'^[MCF]$', description="菜单类型M(-目录,C-菜单,F-按钮)")
+    visible: str = Field("0", pattern=r'^[01]$', description="菜单状态(0-显示,1-隐藏,默认0)")
+    status: str = Field("0", pattern=r'^[01]$', description="状态(0-正常,1-禁用,默认0)")
+    perms: Optional[str] = Field(None, max_length=100, description="权限标识(如 sys:menu:add)")
+    icon: Optional[str] = Field(None, max_length=100, description="菜单图标")
+    update_at:datetime = None
 
     # description: Optional[str] = ''
 

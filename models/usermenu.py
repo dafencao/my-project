@@ -11,6 +11,7 @@ from peewee import fn
 import time
 
 
+
 class Usermenu(BaseModel):
     """
     用户菜单表 
@@ -28,8 +29,8 @@ class Usermenu(BaseModel):
     status = CharField(max_length=1, default="0", verbose_name="状态(0-正常,1-禁用)")
     perms = CharField(max_length=100, verbose_name="权限标识(如 sys:menu:add)")
     icon = CharField(max_length=100, verbose_name="菜单图标")
-    create_time = DateTimeField(verbose_name="创建时间")
-    update_time = DateTimeField(verbose_name="更新时间")
+    create_at = DateTimeField(verbose_name="创建时间")
+    update_at = DateTimeField(verbose_name="更新时间")
 
     class Meta:
         table_name = 'sys_menu'  # 自定义映射的表名
@@ -104,15 +105,51 @@ class Usermenu(BaseModel):
 
 
 
+    # @classmethod
+    # async def select_by_roleId(cls, role_id: str):  # 通过roleid查询用户信息
+
+    #     result =await async_db.execute( Usermenu.select().where(Usermenu.menu_id == role_id).dicts())
+    #     result = list(result)
+    #     print(result)
+    #     return result
+
+    
     @classmethod
-    async def select_by_roleId(cls, roleId: str):  # 通过roleid查询用户信息
-        print('roleId')
-        print(roleId)
-        result =await async_db.execute( Usermenu.select().where(Usermenu.roleId == roleId).dicts())
-        result = list(result)
-        print('result')
-        print(result)
-        return result
+    async def select_by_roleId(cls, role_id: str):
+        from models.userrole import RoleMenuRelp
+        """通过role_id查询角色对应的菜单信息 """
+        try:
+            # 在方法内部导入，避免循环导入
+            from models.userrole import RoleMenuRelp
+            
+            # 显式指定要查询的字段，避免自动添加不存在的字段
+            role_menu_query = RoleMenuRelp.select(
+                RoleMenuRelp.id,
+                RoleMenuRelp.role_id,
+                RoleMenuRelp.menu_id
+            ).where(RoleMenuRelp.role_id == role_id)
+            
+            role_menus = await async_db.execute(role_menu_query.dicts())
+            
+            if not role_menus:
+                print(f"角色 {role_id} 没有分配任何菜单权限")
+                return []
+            
+            # 提取menu_id列表
+            menu_ids = [rm['menu_id'] for rm in role_menus]
+            
+            # 查询对应的菜单信息
+            menu_query = Usermenu.select().where(Usermenu.menu_id.in_(menu_ids))
+            result = await async_db.execute(menu_query.dicts())
+            result = list(result)
+            
+            print(f"角色 {role_id} 的菜单权限: {result}")
+            return result
+        
+        except Exception as e:
+            print(f"查询角色菜单失败: {e}")
+            return []
+
 
     @classmethod
     async def select_by_ids(cls, ids: list):  # 通过menuid查询菜单信息
