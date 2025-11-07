@@ -20,6 +20,7 @@ from schemas.request import sys_user_schema
 from common.session import db, get_db
 from utils.tools_func import rolePremission, tz
 
+
 router = APIRouter()
 
 
@@ -48,13 +49,44 @@ async def login_access_token(
     # })
 
     # 复杂的业务逻辑建议 抽离到 logic文件夹下
-    print('req')
-    print(req)
-    result =await UserInfoLogic().user_login_logic(req.account, req.password)
-    if result:
-        return resp.ok(data={"token": result})
-    else:
-        return resp.fail(resp.Unauthorized.set_msg("账号或密码错误"))
+    # result =await UserInfoLogic().user_login_logic(req.account, req.password)
+    # if result:
+    #     return resp.ok(data={"token": result})
+    # else:
+    #     return resp.fail(resp.Unauthorized.set_msg("账号或密码错误"))
+    print("=== 登录请求开始 ===")
+    print(f"请求数据: account={req.account}, password_length={len(req.password) if req.password else 0}")
+    try:
+        # 参数验证
+        if not req.account or not req.account.strip():
+            return resp.fail(resp.InvalidParams.set_msg("账号不能为空"))
+        
+        if not req.password or not req.password.strip():
+            return resp.fail(resp.InvalidParams.set_msg("密码不能为空"))
+        
+        print(f"🔍 参数验证通过，开始调用业务逻辑")
+        # 调用业务逻辑处理登录
+        result = await UserInfoLogic().user_login_logic(req.account, req.password)
+        
+        if result:
+            return resp.ok(data={"token": result})
+        else:
+            return resp.fail(resp.Unauthorized.set_msg("账号或密码错误"))
+            
+    except Exception as e:
+        print(f"❌ 登录过程发生异常:")
+        print(f"   异常类型: {type(e).__name__}")
+        print(f"   异常信息: {str(e)}")
+        print(f"   请求账号: {req.account}")
+        # 捕获其他所有异常
+        print(f"登录系统异常: {e}")
+
+
+        import traceback
+        tb_info = traceback.format_exc()
+        print(f"   完整堆栈:\n{tb_info}")
+        
+    
 
 
 @router.get("/currentUser", summary="获取用户信息", name="获取用户信息")

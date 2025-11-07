@@ -28,12 +28,9 @@ class UserInfoLogic(object):
 
     @staticmethod
     async def user_login_logic(account: str, password: str):
-        account = account
         user =await Userinfo.single_by_account(account)
         # print('1111account')
         # print(account)
-        print('1111user')
-        print(user)
         if not user:
             raise custom_exc.TokenAuthError(err_desc="账号不存在")
         if not security.verify_password(password, user['password']):

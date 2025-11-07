@@ -1,14 +1,14 @@
 """
-纯增删改查操作，写在model里面
+纯增删改查操作,写在model里面
 """
 
-from common.session import BaseModel, paginator, db, async_db
+from common.session import BaseModel, async_db
 from peewee import CharField, IntegerField,DateTimeField,BigAutoField,BigIntegerField
-from playhouse.shortcuts import model_to_dict, dict_to_model
-from sqlalchemy.orm import relationship
-from schemas.request import sys_usermenu_schema
-from peewee import fn
-import time
+# from playhouse.shortcuts import model_to_dict, dict_to_model
+# from sqlalchemy.orm import relationship
+# from schemas.request import sys_usermenu_schema
+# from peewee import fn
+# import time
 
 
 
@@ -45,6 +45,8 @@ class Usermenu(BaseModel):
     @classmethod
     async def select_all(cls):
         return await async_db.execute(Usermenu.select().dicts())
+    
+    
     @classmethod
     async def fuzzy_query(cls, queryusermenu):
         # fn.abs(userinfo.full_pressure - queryUser.full_pressure).alias('count')

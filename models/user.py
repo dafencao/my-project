@@ -315,18 +315,23 @@ class UserRoleRelp(BaseModel):
     
 
 class Userinfo(BaseModel):
-    birthday = CharField()  # 生日
-    avatar = CharField()  # 头像
-    oraCode = IntegerField(column_name='ora_code')  # 部门code
-    password = CharField()  # 密码
-    realName = CharField(column_name='real_name')  # 真实姓名
-    userRoleId = IntegerField(column_name='user_role_id')  # 角色
-    selectedRoles = CharField(column_name='selected_roles')  # 角色
-    sex = CharField()  # 性别
-    account = CharField()  # 用户名
-    level = IntegerField()  # 层级
-    jobAge = IntegerField(column_name='job_age')  # 从业年限
-    phone = CharField()  # 手机号
+    user_id = BigIntegerField(primary_key=True, verbose_name="用户ID(自增主键)")
+    dept_id = BigIntegerField( verbose_name="部门ID(可为空)")
+    account = CharField(max_length=30, null=False, verbose_name="登录账号（唯一，用于登录）")
+    user_name = CharField(max_length=30, verbose_name="用户真实姓名")
+    nick_name = CharField(max_length=30, verbose_name="用户昵称")
+    user_type = CharField(max_length=2, verbose_name="用户类型(如 00-系统用户,01-普通用户)")
+    email = CharField(max_length=50, verbose_name="用户邮箱")
+    phonenumber = CharField(max_length=11, verbose_name="手机号码")
+    sex = CharField(max_length=1, default="0", verbose_name="用户性别(0-未知,1-男,2-女)")
+    avatar = CharField(max_length=100, verbose_name="头像地址(URL)")
+    password = CharField(max_length=100, verbose_name="密码(加密存储)")
+    status = CharField(max_length=1, default="0", verbose_name="账号状态(0-正常,1-禁用)")
+    del_flag = CharField(max_length=1, default="0", verbose_name="删除标志(0-未删,1-已删)")
+    login_ip = CharField(max_length=128, verbose_name="最后登录IP")
+    login_date = DateTimeField(verbose_name="最后登录时间")
+    create_at = DateTimeField(verbose_name="创建时间")
+    update_at = DateTimeField(verbose_name="更新时间")
 
     class Meta:
         table_name = 'sys_user'  # 自定义映射的表名
