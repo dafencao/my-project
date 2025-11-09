@@ -20,37 +20,104 @@ from core import security
 from core.config import settings
 from common import custom_exc
 from passlib.context import CryptContext
+from fastapi import Depends,HTTPException,Request
+from fastapi.security import OAuth2PasswordBearer
+import jwt
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# 定义 OAuth2 方案
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 
 class UserInfoLogic(object):
 
     @staticmethod
     async def user_login_logic(account: str, password: str):
-        user =await Userinfo.single_by_account(account)
-        # print('1111account')
-        # print(account)
+        user = await Userinfo.single_by_account(account)
         if not user:
-            raise custom_exc.TokenAuthError(err_desc="账号不存在")
+            raise HTTPException(status_code=401, detail="账号不存在")
         if not security.verify_password(password, user['password']):
-            raise custom_exc.TokenAuthError(err_desc="密码错误")
+            raise HTTPException(status_code=401, detail="密码错误")
 
         access_token_expires = timedelta(
-            # minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
             minutes=float(os.getenv('ACCESS_TOKEN_EXPIRE_MINUTES'))) if os.getenv('ACCESS_TOKEN_EXPIRE_MINUTES') else os.getenv('ACCESS_TOKEN_EXPIRE_MINUTES')
+        
         token = security.create_access_token(
             user['account'], expires_delta=access_token_expires)
-        # 使用token和redis怎样判断账户是否失效和异地登录
-        # 将token作为value，账户的id作为key
-        # 每次登录都去redis中查询该账户的登录是否过期，没有过期则删掉原来的id，token，将新生成token作为value存入redis中。过期则没有该账户信息，则重新存入redis中
-
-        # 用户每次请求接口都需要验证是否在登录状态。（这里需要一个filter或则intercepter）获取token。解析token。将id从token中解析出来去。然后将用户的id作为key去redis中查询token。
-
-        # 查询为空则表示登录过期。不为空则将解析出来的token和redis中的token作对比，如果相同，则用户状态正常则继续请求接口。如果不相同，则账号在其他设备登录.
-        # ex 过期秒数*60*24*8
-        redis_client.set(user['account'], token, ex=60*60*24*8)
+        
+        # 登录状态管理逻辑
+        user_key = f"user:{user['user_id']}"
+        
+        # 检查是否已有登录状态
+        existing_token = redis_client.get(user_key)
+        
+        if existing_token:
+            # 清除旧的token映射
+            old_token_key = f"token:{existing_token}"
+            redis_client.delete(old_token_key)
+            redis_client.delete(user_key)
+            
+        # 存储新的token到Redis
+        redis_client.set(user_key, token, ex=60*60*24*8)
+        
+        # 同时存储account到token的映射
+        token_key = f"token:{token}"
+        redis_client.set(token_key, user['account'], ex=60*60*24*8)
+        
         return token
 
-    def xxx_logic(self):
-        pass
+
+async def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
+    try:
+        # 1. 首先从Redis验证token是否存在
+        redis_token_key = f"token:{token}"
+        redis_account = redis_client.get(redis_token_key)
+        
+        if not redis_account:
+            raise HTTPException(status_code=401, detail="Token已失效，请重新登录")
+        
+        # 2. 添加缺失的环境变量定义
+        SECRET_KEY = os.getenv('SECRET_KEY')
+        ALGORITHM = os.getenv('ALGORITHM')
+        
+        if not SECRET_KEY or not ALGORITHM:
+            raise HTTPException(status_code=500, detail="系统配置错误")
+        
+        # 3. 验证JWT token
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        account = payload.get("sub")
+        
+        if not account:
+            raise HTTPException(status_code=401, detail="Token格式错误")
+        
+        if account != redis_account:
+            raise HTTPException(status_code=401, detail="Token无效")
+        
+        # 4. 获取用户完整信息
+        user = await Userinfo.single_by_account(account)
+
+        
+        if not user:
+            raise HTTPException(status_code=401, detail="用户不存在")
+        
+        user_info = user.copy()
+        user_info['token'] = token
+        
+        return user_info
+    
+        
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token已过期")
+    except Exception as e:
+        raise HTTPException(status_code=401, detail="用户认证失败")
+    
+
+async def get_current_user_for_logout(token: str = Depends(oauth2_scheme)) -> dict:
+    user_info = await get_current_user(token)
+    
+    # 只返回登出需要的字段
+    return {
+        "user_id": user_info.get('user_id'),
+        "account": user_info.get('account'),
+        "token": user_info.get('token')
+    }

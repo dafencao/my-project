@@ -20,6 +20,8 @@ from datetime import datetime, timedelta
 
 from jose import jwt
 from passlib.context import CryptContext
+import hashlib
+import bcrypt
 
 from core.config import settings
 
@@ -56,7 +58,11 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     :param hashed_password: hash后的密码
     :return:
     """
-    return pwd_context.verify(plain_password, hashed_password)
+     # 验证时同样先进行 SHA-256 哈希
+    sha256_hash = hashlib.sha256(plain_password.encode('utf-8')).hexdigest()
+    password_byte_enc = sha256_hash.encode('utf-8')
+    hashed_password_bytes = hashed_password.encode('utf-8')
+    return bcrypt.checkpw(password_byte_enc, hashed_password_bytes)
 
 
 def get_password_hash(password: str) -> str:
@@ -65,4 +71,10 @@ def get_password_hash(password: str) -> str:
     :param password:
     :return:
     """
-    return pwd_context.hash(password)
+    # 先用 SHA-256 哈希密码，确保长度固定为 64 字符
+    sha256_hash = hashlib.sha256(password.encode('utf-8')).hexdigest()
+    # 然后使用 bcrypt 哈希
+    pwd_bytes = sha256_hash.encode('utf-8')
+    salt = bcrypt.gensalt()
+    hashed_password = bcrypt.hashpw(password=pwd_bytes, salt=salt)
+    return hashed_password.decode('utf-8')

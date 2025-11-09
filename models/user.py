@@ -12,6 +12,7 @@ from core import security
 from peewee import fn, JOIN
 from datetime import datetime 
 from typing import Optional
+from fastapi import Request
 
 
 from utils.tools_func import convert_arr, convert_num_arr
@@ -316,7 +317,8 @@ class UserRoleRelp(BaseModel):
 
 class Userinfo(BaseModel):
     user_id = BigIntegerField(primary_key=True, verbose_name="用户ID(自增主键)")
-    dept_id = BigIntegerField( verbose_name="部门ID(可为空)")
+    dept_id = BigIntegerField( verbose_name="部门ID(不可空)")
+    role_id = BigIntegerField( verbose_name="角色ID(不可空)")
     account = CharField(max_length=30, null=False, verbose_name="登录账号（唯一，用于登录）")
     user_name = CharField(max_length=30, verbose_name="用户真实姓名")
     nick_name = CharField(max_length=30, verbose_name="用户昵称")
@@ -589,13 +591,9 @@ class Userinfo(BaseModel):
 
     @classmethod
     async def add_user(cls, userinfo):  # 添加用户
-        # nickname: str,email: str,password: str,authority_id,avatar: str   name=user.name,
-        # nickname=nickname,email=email,password=password,authority_id=authority_id,avatar=avatar
-        # print("user")
-        # print(userinfo)
         result = await async_db.create(Userinfo, **userinfo)
 
-        return result.id
+        return result.user_id
 
     @classmethod
     async def del_by_userid(cls, userid):  # 通过用户id删除信息
@@ -629,3 +627,17 @@ class Userinfo(BaseModel):
             # u.execute()
         else:
             print("密码错误")
+
+    @classmethod
+    async def get_client_ip(request: Request) -> str:
+        """获取客户端真实IP地址"""
+        forwarded_for = request.headers.get("X-Forwarded-For")
+        if forwarded_for:
+            client_ip = forwarded_for.split(",")[0].strip()
+        else:
+            real_ip = request.headers.get("X-Real-IP")
+            if real_ip:
+                client_ip = real_ip
+            else:
+                client_ip = request.client.host if request.client else "unknown"
+        return client_ip

@@ -62,27 +62,23 @@ class UserQuery(BaseModel):
 
 class UserCreate(BaseModel):
 
-    account:  Optional[str]
-    password: Optional[str]
-    realName: Optional[str]
-    userRoleId: Optional[int]
-    sex: Optional[str] = ''
+    dept_id: Optional[int] = Field(None, description="部门ID")
+    role_id: Optional[int] = Field(None, description="角色ID")
+    account: Optional[str] = Field(None,description='用户账号')
+    user_name: Optional[str] = Field(None, max_length=30, description="用户真实姓名")
+    nick_name: Optional[str] = Field(None,description='用户昵称')
+    user_type: Optional[str] = Field(None, max_length=2, description="用户类型")
+    email: Optional[str] = Field(None, max_length=50, description="邮箱")
+    phonenumber: Optional[str] = Field(None, max_length=11, description="手机号")
+    sex: Optional[str] = Field(None, pattern=r'^[012]$', description="性别")
+    avatar: Optional[str] = Field(None, max_length=100, description="头像地址")
+    password: Optional[str] = Field(None,description='用户密码')
+    status: Optional[str] = Field(None, pattern=r'^[01]$', description="账号状态")
+    login_date:datetime = None
+    create_at:datetime = None
+    update_at:datetime = None
 
-    email: Optional[EmailStr] = ''
-    # phone: Optional[str] = ''
-    phone: Optional[constr(min_length=11, max_length=11)] = ''
-
-    oraCode: Optional[int]
-    level: Optional[str]
-    jobAge: Optional[float]=0
-
-    birthday: Optional[Union[date, datetime]]
-    post: List[int] = None
-    line: List[int] = None
-    createAt: Optional[datetime] = None
-    updateAt: Optional[datetime] = None
-
-    @validator('phone')
+    @validator('phonenumber')
     def is_phone(cls, tel):
         ret = re.match(r"^1[345678]\d{9}$", tel)
         if ret:

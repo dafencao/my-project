@@ -2,7 +2,7 @@ from typing import Any, List, Optional
 from datetime import datetime, timedelta
 
 import pytz
-from fastapi import APIRouter, Depends, HTTPException, Form, Header
+from fastapi import APIRouter, Depends, HTTPException, Form, Header,Request
 
 from core import security
 
@@ -19,7 +19,8 @@ from logic.user_logic import UserInfoLogic
 from schemas.request import sys_user_schema
 from common.session import db, get_db
 from utils.tools_func import rolePremission, tz
-
+from logic.user_logic import get_current_user,get_current_user_for_logout
+from common.sys_redis import redis_client
 
 router = APIRouter()
 
@@ -28,11 +29,6 @@ router = APIRouter()
 async def login_access_token(
         req: sys_user_schema.UserAuth,
 ) -> Any:
-    """
-    简单实现登录
-    :param req:
-    :return:
-    """
 
     # 验证用户 简短的业务可以写在这里
     # if not user:
@@ -54,8 +50,11 @@ async def login_access_token(
     #     return resp.ok(data={"token": result})
     # else:
     #     return resp.fail(resp.Unauthorized.set_msg("账号或密码错误"))
-    print("=== 登录请求开始 ===")
-    print(f"请求数据: account={req.account}, password_length={len(req.password) if req.password else 0}")
+    """
+    简单实现登录
+    :param req:
+    :return:
+    """
     try:
         # 参数验证
         if not req.account or not req.account.strip():
@@ -64,7 +63,6 @@ async def login_access_token(
         if not req.password or not req.password.strip():
             return resp.fail(resp.InvalidParams.set_msg("密码不能为空"))
         
-        print(f"🔍 参数验证通过，开始调用业务逻辑")
         # 调用业务逻辑处理登录
         result = await UserInfoLogic().user_login_logic(req.account, req.password)
         
@@ -74,25 +72,47 @@ async def login_access_token(
             return resp.fail(resp.Unauthorized.set_msg("账号或密码错误"))
             
     except Exception as e:
-        print(f"❌ 登录过程发生异常:")
-        print(f"   异常类型: {type(e).__name__}")
-        print(f"   异常信息: {str(e)}")
-        print(f"   请求账号: {req.account}")
-        # 捕获其他所有异常
-        print(f"登录系统异常: {e}")
-
-
-        import traceback
-        tb_info = traceback.format_exc()
-        print(f"   完整堆栈:\n{tb_info}")
+        # 统一异常处理
+        error_msg = str(e)
+        if "账号不存在" in error_msg or "密码错误" in error_msg:
+            return resp.fail(resp.Unauthorized.set_msg(error_msg))
+        else:
+            return resp.fail(resp.InternalServerError.set_msg("系统内部错误"))
         
+
+@router.post("/logout", summary="用户登出", name="登出")
+async def logout_access_token(
+    current_user: dict = Depends(get_current_user_for_logout)  # 使用专门的登出依赖
+) -> Any:
+    """
+    用户登出 - 清除Redis中的登录状态
+    """
+    try:
+        user_id = current_user.get('user_id')
+        token = current_user.get('token')
+        
+        if not user_id or not token:
+            return resp.fail(resp.Unauthorized.set_msg("用户未登录或token无效"))
+        
+        # 清除Redis中的登录状态
+        user_key = f"user:{user_id}"
+        token_key = f"token:{token}"
+        
+        # 删除两个映射
+        redis_client.delete(user_key)
+        redis_client.delete(token_key)
+        
+        return resp.ok(msg="登出成功")
+        
+    except Exception as e:
+        return resp.fail(resp.InternalServerError.set_msg("登出失败"))
     
 
 
 @router.get("/currentUser", summary="获取用户信息", name="获取用户信息")
 async def get_current_user(
         *,
-        current_user: Userinfo = Depends(deps.get_current_userinfo),
+        current_user: Userinfo = Depends(get_current_user),
         # Referer: dict = Depends(deps.save_user_action)
 
 ) -> Any:
@@ -105,38 +125,35 @@ async def get_current_user(
 
 
 # /sys/add
-@router.post("/add", summary="新增一条用户记录", name="添加用户")
+@router.post("/user/add", summary="新增用户", name="添加用户")
 async def add_userinfo_info(
-        userinfo: sys_user_schema.UserCreate,
+        userinfo: sys_user_schema.UserCreate
 ) -> Any:
-    userinfo.createAt = datetime.strftime(
-        datetime.now(pytz.timezone('Asia/Shanghai')), '%Y-%m-%d %H:%M:%S')
-    userinfo.updateAt = userinfo.createAt
-    # print("user")
-    # print(userinfo)
-    userinfo.password = security.get_password_hash(userinfo.password)
-    user = userinfo.dict()
     try:
+        userinfo.create_at = datetime.strftime(
+                            datetime.now(pytz.timezone('Asia/Shanghai')), '%Y-%m-%d %H:%M:%S')
+        userinfo.update_at = userinfo.create_at
+        Userinfo.login_ip = Userinfo.get_client_ip
+        userinfo.login_date = userinfo.create_at
+        userinfo.password = security.get_password_hash(userinfo.password)
+        user = userinfo.dict()
         async with db.atomic_async():
-
             result =await Userinfo.add_user(user)
-            # print('result')
-            # print(result)
             # 同步更新用户角色关系表 即搜索关系表得到的selectedRoles字段
             await UserRoleRelp.add(
-                {'userId': result, 'roleId': userinfo.userRoleId})
+                {'user_id': result, 'role_id': userinfo.role_id})
             # 同步更新用户产品线关系表
-            if userinfo.line:
-                for lineId in userinfo.line:
-                    # UserLineRelp.create(
-                    #     userId=result, lineId=lineId)
-                    await UserLineRelp.add({'userId': result, 'lineId': lineId})
+            # if userinfo.line:
+            #     for lineId in userinfo.line:
+            #         # UserLineRelp.create(
+            #         #     userId=result, lineId=lineId)
+            #         await UserLineRelp.add({'userId': result, 'lineId': lineId})
             # 同步更新用户职位关系表
-            if userinfo.post:
+            # if userinfo.post:
 
-                for postId in userinfo.post:
-                    await UserPostRelp.add({
-                        'userId': result, 'postId': postId})
+            #     for postId in userinfo.post:
+            #         await UserPostRelp.add({
+            #             'userId': result, 'postId': postId})
 
     except IntegrityError as e:
         return resp.fail(resp.DataStoreFail.set_msg('用户账号已存在！'))
@@ -552,4 +569,27 @@ async def get_department() -> Any:
 
     return resp.ok(data=result)
 
-
+@router.post("/clear-redis")
+async def clear_redis():
+    """清理Redis中的用户token数据,测试用"""
+    try:
+        # 删除所有user:和token:开头的key
+        user_keys = redis_client.keys("user:*")
+        token_keys = redis_client.keys("token:*")
+        
+        if user_keys:
+            redis_client.delete(*user_keys)
+        if token_keys:
+            redis_client.delete(*token_keys)
+            
+        return {
+            "status": 1000,
+            "msg": f"已清理 {len(user_keys)} 个user键和 {len(token_keys)} 个token键",
+            "success": True
+        }
+    except Exception as e:
+        return {
+            "status": 1004,
+            "msg": f"清理失败: {str(e)}",
+            "success": False
+        }
