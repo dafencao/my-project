@@ -74,7 +74,6 @@ class UserCreate(BaseModel):
     avatar: Optional[str] = Field(None, max_length=100, description="头像地址")
     password: Optional[str] = Field(None,description='用户密码')
     status: Optional[str] = Field(None, pattern=r'^[01]$', description="账号状态")
-    login_date:datetime = None
     create_at:datetime = None
     update_at:datetime = None
 
@@ -107,7 +106,7 @@ class UsersCreate(BaseModel):
 
     # email: Optional[str] = ''
     email: Optional[EmailStr] = ''
-    phone: Optional[constr(min_length=11, max_length=11)]
+    phone: Optional[str] = None
     oraCode: Optional[int] = None
     department: Optional[str]  # =None
     level: Optional[str]
@@ -134,12 +133,19 @@ class UsersCreate(BaseModel):
 
 
 class UserUpdate(UserBase):
-    id: str
+    user_id: str
+    dept_id: Optional[int] = Field(None, description="部门ID")
+    role_id: Optional[int] = Field(None, description="角色ID")
     # password: Optional[str] = None
-    updateAt: Optional[datetime] = None
-    line: List[int]=None
-    post: List[int]=None
-    email: Optional[EmailStr]  = None
+    account: Optional[str] = Field(None,description='用户账号')
+    user_name: Optional[str] = Field(None, max_length=30, description="用户真实姓名")
+    nick_name: Optional[str] = Field(None,description='用户昵称')
+    user_type: Optional[str] = Field(None, max_length=2, description="用户类型")
+    email: Optional[str] = Field(None, max_length=50, description="邮箱")
+    phonenumber: Optional[str] = Field(None, max_length=11, description="手机号")
+    sex: Optional[str] = Field(None, pattern=r'^[012]$', description="性别")
+    avatar: Optional[str] = Field(None, max_length=100, description="头像地址")
+    update_at: Optional[datetime] = None
 
     # lastUserInfo: Optional[str]
 

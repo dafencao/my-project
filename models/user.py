@@ -278,9 +278,9 @@ class UserRoleRelp(BaseModel):
         return result
 
     @classmethod
-    async def delete_by_userId(cls, id):  # 获取
+    async def delete_by_userId(cls, user_id):  # 删除用户角色关联表内容
         return await async_db.execute(
-            UserRoleRelp.delete().where(UserRoleRelp.user_id == id))
+            UserRoleRelp.delete().where(UserRoleRelp.user_id == user_id))
 
     @classmethod
     async def delete_by_roleId(cls, id):  # 获取
@@ -330,8 +330,6 @@ class Userinfo(BaseModel):
     password = CharField(max_length=100, verbose_name="密码(加密存储)")
     status = CharField(max_length=1, default="0", verbose_name="账号状态(0-正常,1-禁用)")
     del_flag = CharField(max_length=1, default="0", verbose_name="删除标志(0-未删,1-已删)")
-    login_ip = CharField(max_length=128, verbose_name="最后登录IP")
-    login_date = DateTimeField(verbose_name="最后登录时间")
     create_at = DateTimeField(verbose_name="创建时间")
     update_at = DateTimeField(verbose_name="更新时间")
 
@@ -596,9 +594,8 @@ class Userinfo(BaseModel):
         return result.user_id
 
     @classmethod
-    async def del_by_userid(cls, userid):  # 通过用户id删除信息
-        return await async_db.execute(Userinfo.delete().where(Userinfo.id ==
-                                                              userid))
+    async def del_by_userid(cls, user_id):  # 通过用户id删除信息
+        return await async_db.execute(Userinfo.delete().where(Userinfo.user_id == user_id))
 
     @classmethod
     async def update_user(cls, user):
@@ -641,3 +638,5 @@ class Userinfo(BaseModel):
             else:
                 client_ip = request.client.host if request.client else "unknown"
         return client_ip
+
+

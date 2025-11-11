@@ -28,6 +28,7 @@ router = APIRouter()
 @router.post("/login", summary="用户登录认证", name="登录")
 async def login_access_token(
         req: sys_user_schema.UserAuth,
+        request: Request
 ) -> Any:
 
     # 验证用户 简短的业务可以写在这里
@@ -110,16 +111,19 @@ async def logout_access_token(
 
 
 @router.get("/currentUser", summary="获取用户信息", name="获取用户信息")
-async def get_current_user(
+async def get_current_userinfo(
         *,
         current_user: Userinfo = Depends(get_current_user),
         # Referer: dict = Depends(deps.save_user_action)
 
 ) -> Any:
-    current_user.pop('password')
-    result =await Userrole.query_role_perm(current_user['userRoleId'])
-    # current_user['allAuth'] = rolePremissionList[current_user['userRoleId']]
-    current_user['allAuth'] = result
+    # 移除敏感信息
+    current_user.pop('password', None)
+    current_user.pop('token', None)
+    
+    # 查询权限
+    role_permissions = await Userrole.query_role_perm(current_user['role_id'])
+    current_user['allAuth'] = role_permissions
 
     return resp.ok(data=current_user)
 
@@ -133,8 +137,6 @@ async def add_userinfo_info(
         userinfo.create_at = datetime.strftime(
                             datetime.now(pytz.timezone('Asia/Shanghai')), '%Y-%m-%d %H:%M:%S')
         userinfo.update_at = userinfo.create_at
-        Userinfo.login_ip = Userinfo.get_client_ip
-        userinfo.login_date = userinfo.create_at
         userinfo.password = security.get_password_hash(userinfo.password)
         user = userinfo.dict()
         async with db.atomic_async():
@@ -195,22 +197,8 @@ async def add_userinfo_info(
     for item in result:
         levelDict[item[importField]] = item['id']
     for userinfo in userList:
-        print(userinfo.birthday)
-        print(type(userinfo.birthday))
-        # userinfo.phone = userinfo.phone.group()
-        # try:
-        #     print(userinfo.birthday)
-        #     print(type(userinfo.birthday))
-        #     userinfo.birthday = datetime.strptime(userinfo.birthday, "%Y-%m-%dT%H:%M:%S.%f%z")
-        # except Exception as e:
-        #     return resp.fail(resp.DataStoreFail.set_msg('生日日期格式错误'+ userinfo.birthday+'， 请检查！'))
-
-        # print("user")
-        # print(userinfo.roleCode)
         userinfo.password = security.get_password_hash(userinfo.password)
         user = userinfo.dict()
-        # user['createAt'] = datetime.strftime(
-        #             datetime.now(pytz.timezone('Asia/Shanghai')), '%Y-%m-%d %H:%M:%S')
         if userinfo.department not in departmentDict.keys():
             return resp.fail(resp.DataStoreFail.set_msg('部门编码 ' + userinfo.department + '不存在，请检查！'))
         user['oraCode'] = departmentDict[userinfo.department]
@@ -232,37 +220,31 @@ async def add_userinfo_info(
                     return resp.fail(resp.DataStoreFail.set_msg('产品线信息与数据库不匹配！' + line))
                 else:
                     line = lineDict[line]
-        print('user')
-        print(user)
-        user['createAt'] = datetime.strftime(
+
+        user['create_at'] = datetime.strftime(
         datetime.now(pytz.timezone('Asia/Shanghai')), '%Y-%m-%d %H:%M:%S')
-        user['updateAt'] = datetime.strftime(
-            datetime.now(pytz.timezone('Asia/Shanghai')), '%Y-%m-%d %H:%M:%S')
-        # print('userinfo')
-        # print(userinfo)
-        # print(roleDict.keys())
+        user['update_at'] = datetime.strftime(
+        datetime.now(pytz.timezone('Asia/Shanghai')), '%Y-%m-%d %H:%M:%S')
+
         try:
             async with db.atomic_async():
                 # 字段有效
                 result =await Userinfo.add_user(user)
-                # print('result')
-                # print(result)
-                # 同步更新用户角色关系表 即搜索关系表得到的selectedRoles字段
                 await UserRoleRelp.add(
                     {'userId': result, 'roleId': roleCodeDict[userinfo.roleCode]})
                 # 同步更新用户产品线关系表
-                if userinfo.line:
-                    for line in userinfo.line:
-                        # UserLineRelp.create(
-                        #     userId=result, lineId=lineDict[line])
-                        await UserLineRelp.add({'userId': result, 'lineId': lineDict[line]})
+                # if userinfo.line:
+                #     for line in userinfo.line:
+                #         # UserLineRelp.create(
+                #         #     userId=result, lineId=lineDict[line])
+                #         await UserLineRelp.add({'userId': result, 'lineId': lineDict[line]})
 
                 # 同步更新用户职位关系表
-                if userinfo.post:
+                # if userinfo.post:
 
-                    for post in userinfo.post:
-                        await UserPostRelp.add(
-                            {'userId': result, 'postId': postDict[post]})
+                #     for post in userinfo.post:
+                #         await UserPostRelp.add(
+                #             {'userId': result, 'postId': postDict[post]})
         except IntegrityError as e:
             return resp.fail(resp.DataStoreFail.set_msg('用户账号已存在！'), detail=str(e))
             # return resp.ok(data=[], msg='用户账号已存在！', success=False)
@@ -273,19 +255,15 @@ async def add_userinfo_info(
     return resp.ok()
 
 
-# , dependencies= [Depends(get_db)]
+
 @router.delete("/delete", summary="删除一条用户信息", name="删除用户")
 async def del_user(
-        id: str
+        user_id: int
 ) -> Any:
-    # print(id)
     try:
         async with db.atomic_async():
-            result =await Userinfo.del_by_userid(id)
-            await UserRoleRelp.delete_by_userId(id)
-            await UserLineRelp.delete_by_userId(id)
-            await UserPostRelp.delete_by_userId(id)
-            # UserLineRelp.delete().where(UserLineRelp.userId == id)
+            result = await Userinfo.del_by_userid(user_id)
+            await UserRoleRelp.delete_by_userId(user_id)
     except Exception as e:
         return resp.fail(resp.DataDestroyFail, detail=str(e))
     return resp.ok(data=result)
@@ -294,33 +272,27 @@ async def del_user(
 # /sys/edit
 
 
-@router.put("/update", summary="修改一条用户记录", name="编辑用户")
+@router.put("/update", summary="修改一条用户信息", name="编辑用户")
 async def edit_user(
         # userinfo: dict  修改与添加大同小异 修改没有password字段
         req: sys_user_schema.UserUpdate,
 ) -> Any:
-    req.updateAt = datetime.strftime(
+    req.update_at = datetime.strftime(
         datetime.now(pytz.timezone('Asia/Shanghai')), '%Y-%m-%d %H:%M:%S')
-    userRoleId = req.userRoleId
-    userId = req.id
+    role_id = req.role_id
+    user_id = req.user_id
     # TODO:userRoleId
-    # print('req.updateAt')
-    # print(req.updateAt)
-    # print('dict(req)')
-    # print(dict(req))
 
-    lastUserInfo =await Userinfo.select_by_id(req.id)
+    lastUserInfo =await Userinfo.select_by_id(req.user_id)
     # print('lastUserInfo')
     # print(lastUserInfo)
     user = dict(req)
-    user.pop('line')
-    user.pop('post')
     user = dict_to_model(Userinfo, user)
     # try:
     if True:
         async with db.atomic_async():
             result =await Userinfo.update_user(user)
-            if lastUserInfo['userRoleId'] != req.userRoleId:
+            if lastUserInfo['role_id'] != req.role_id:
                 # result = list(UserRoleRelp.select().where(UserRoleRelp.userId == req.userRoleId).dicts())
                 result = await UserRoleRelp.select_by_userId(req.userRoleId)
                 if len(result) == 0:
@@ -333,38 +305,38 @@ async def edit_user(
                     # UserRoleRelp.update({UserRoleRelp.roleId: userinfo.userRoleId}).where(
                     #     UserRoleRelp.userId == userinfo.id).execute()
                     UserRoleRelp.update({'roleId': req.userRoleId}).where(
-                        UserRoleRelp.userId == userId).execute()
-                    relp = dict_to_model(UserRoleRelp, {'userId': userId, 'roleId': req.userRoleId})
+                        UserRoleRelp.userId == user_id).execute()
+                    relp = dict_to_model(UserRoleRelp, {'userId': user_id, 'roleId': req.userRoleId})
                     await UserRoleRelp.update_by_model(relp)
 
-            if req.line and lastUserInfo['lineIds'] != req.line:
+            # if req.line and lastUserInfo['lineIds'] != req.line:
 
-                # print('!=')
-                for id in req.line:
-                    if id not in lastUserInfo['lineIds']:
-                        # print('create')
-                        # UserLineRelp.create(
-                        #     userId=userId,
-                        #     lineId=id)
-                        await UserLineRelp.add({'userId': userId,
-                                                'lineId': id})
-                for id in lastUserInfo['lineIds']:
-                    if id not in req.line:
-                        # print('delete')
-                        # result = UserLineRelp.delete().where(UserLineRelp.lineId ==
-                        #                                      id, UserLineRelp.userId == userId).execute()
-                        result = UserLineRelp.delete_by_userId_and_lineId(userId, id)
-            if req.post and lastUserInfo['postIds'] != req.post:
-                for id in req.post:
-                    if id not in lastUserInfo['postIds']:
-                        await UserPostRelp.add(
-                            {'userId': userId,
-                             'postId': id})
-                for id in lastUserInfo['postIds']:
-                    if id not in req.post:
-                        # result = UserPostRelp.delete().where(UserPostRelp.postId ==
-                        #                                      id, UserPostRelp.userId == userId).execute()
-                        await UserPostRelp.delete_by_userId_and_postId(userId, id)
+            #     # print('!=')
+            #     for id in req.line:
+            #         if id not in lastUserInfo['lineIds']:
+            #             # print('create')
+            #             # UserLineRelp.create(
+            #             #     userId=userId,
+            #             #     lineId=id)
+            #             await UserLineRelp.add({'userId': userId,
+            #                                     'lineId': id})
+            #     for id in lastUserInfo['lineIds']:
+            #         if id not in req.line:
+            #             # print('delete')
+            #             # result = UserLineRelp.delete().where(UserLineRelp.lineId ==
+            #             #                                      id, UserLineRelp.userId == userId).execute()
+            #             result = UserLineRelp.delete_by_userId_and_lineId(userId, id)
+            # if req.post and lastUserInfo['postIds'] != req.post:
+            #     for id in req.post:
+            #         if id not in lastUserInfo['postIds']:
+            #             await UserPostRelp.add(
+            #                 {'userId': userId,
+            #                  'postId': id})
+            #     for id in lastUserInfo['postIds']:
+            #         if id not in req.post:
+            #             # result = UserPostRelp.delete().where(UserPostRelp.postId ==
+            #             #                                      id, UserPostRelp.userId == userId).execute()
+            #             await UserPostRelp.delete_by_userId_and_postId(userId, id)
         return resp.ok( )
     # except Exception as e:
     #     print(e)

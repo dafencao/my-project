@@ -149,30 +149,39 @@ class Userrole(BaseModel):
     class Config:
         orm_mode = True
 
+
     @classmethod
-    async def query_role_perm(cls,userRoleId):
-        db =await async_db.execute( Userrole.select(
-            Userrole.id,
-            fn.group_concat(Usermenu.url)
-            .python_value(convert_arr)
-            .alias('perm')
-        ).join(
-            RoleMenuRelp, JOIN.LEFT_OUTER,
-            on=(Userrole.id == RoleMenuRelp.roleId)
-        ).join(
-            Usermenu,
-            JOIN.LEFT_OUTER,
-            on=(Usermenu.id ==
-                RoleMenuRelp.menuId)
-        ).where(Usermenu.menuType == 0,Userrole.id==userRoleId).group_by(Userrole.id).dicts())
-        if db:
-            result = list(db)
-            rolePremissionList = {}
-            for item in result:
-                rolePremissionList[item['id']] = item['perm']
-            return rolePremissionList[userRoleId]
-        else:
-            return []
+    async def query_role_perm(cls, role_id):
+        """查询角色权限 - 生产版本"""
+        try:
+            query = (Userrole.select(
+                Userrole.role_id,
+                fn.group_concat(Usermenu.path).alias('perm')
+            ).join(
+                RoleMenuRelp, JOIN.LEFT_OUTER,
+                on=(Userrole.role_id == RoleMenuRelp.role_id)
+            ).join(
+                Usermenu, JOIN.LEFT_OUTER,
+                on=(Usermenu.menu_id == RoleMenuRelp.menu_id)
+            ).where(
+                (Usermenu.menu_type == 'M') & (Userrole.role_id == role_id)
+            ).group_by(Userrole.role_id))
+            
+            db = await async_db.execute(query.dicts())
+            result_list = list(db)
+            
+            if result_list:
+                permissions = result_list[0].get('perm', '')
+                if permissions:
+                    # 将逗号分隔的字符串转换为数组，过滤空值
+                    perm_list = [perm.strip() for perm in permissions.split(',') if perm.strip()]
+                    return perm_list
+            
+            return []  # 默认返回空数组
+                
+        except Exception as e:
+            print(f"权限查询错误: {str(e)}")
+            return []  # 出错时返回空数组，避免影响主流程
         # db = Userrole.select(
         #     Userrole.id,
         #     fn.group_concat(Permission.url)
