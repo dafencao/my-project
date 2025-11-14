@@ -3,7 +3,7 @@
 """
 
 from common.session import BaseModel, paginator, db, async_db
-from peewee import CharField, IntegerField, DateTimeField,BigIntegerField,Field
+from peewee import CharField, IntegerField, DateTimeField,BigIntegerField,BigAutoField
 from playhouse.shortcuts import model_to_dict, dict_to_model
 from sqlalchemy.orm import relationship
 from models.userrole import Userrole
@@ -158,12 +158,13 @@ class Department(BaseModel):
     """
     部门表，
     """
-    id = IntegerField(primary_key=True)
-    name = CharField()
-    code = CharField()
+    # 部门ID：自增主键（bigint类型）
+    dept_id = BigAutoField(primary_key=True, verbose_name="部门ID")
+    # 部门名称：非空，最长30字符
+    dept_name = CharField(max_length=30, null=False, verbose_name="部门名称")
 
     class Meta:
-        table_name = 'department'  # 自定义映射的表名
+        table_name = 'sys_dept'  # 自定义映射的表名
 
     class Config:
         orm_mode = True
@@ -267,9 +268,9 @@ class UserRoleRelp(BaseModel):
     # @classmethod
     # def add(cls, id: int):  # 通过id查询用户信息
     @classmethod
-    async def select_by_userId(cls, userId):  # 添加
+    async def select_by_userId(cls, user_id):  # 添加
         result = await async_db.execute(
-            UserRoleRelp.select().where(UserRoleRelp.user_id == userId).dicts())
+            UserRoleRelp.select().where(UserRoleRelp.user_id == user_id).dicts())
         return list(result)
 
     @classmethod
@@ -349,7 +350,7 @@ class Userinfo(BaseModel):
         pass
 
     @classmethod
-    async def select_by_id(cls, id: int):  # 通过id查询用户信息
+    async def select_by_id(cls, user_id: int):  # 通过id查询用户信息
 
         # result = Userinfo.select().join(Userpost,
         #                                 on=(Userinfo.postId == Userpost.id)).join(Userline,
@@ -358,62 +359,62 @@ class Userinfo(BaseModel):
         # db = Userinfo.select().where(Userinfo.id == id).first()
         db = await async_db.execute(Userinfo.select(
             Userinfo,
-            fn.group_concat(Userline.id)
-            .python_value(convert_num_arr)
-            .alias('lineIds'),
-            fn.group_concat(Userline.name)
-            .python_value(convert_arr)
-            .alias('line'),
-            fn.group_concat(Userpost.id)
-            .python_value(convert_num_arr)
-            .alias('postIds'),
-            fn.group_concat(Userpost.name)
-            .python_value(convert_arr)
-            .alias('post'),
+            # fn.group_concat(Userline.id)
+            # .python_value(convert_num_arr)
+            # .alias('lineIds'),
+            # fn.group_concat(Userline.name)
+            # .python_value(convert_arr)
+            # .alias('line'),
+            # fn.group_concat(Userpost.id)
+            # .python_value(convert_num_arr)
+            # .alias('postIds'),
+            # fn.group_concat(Userpost.name)
+            # .python_value(convert_arr)
+            # .alias('post'),
+            Department.dept_id.alias('dept_id'),
+            Department.dept_name.alias('department'),
+            # Level.name.alias('levelName'),
+            UserRoleRelp.role_id.alias('role_id'),
 
-            Department.name.alias('department'),
-            Level.name.alias('levelName'),
-            UserRoleRelp.roleId.alias('userRoleId'),
-
-            Userrole.roleName.alias('userRole')
-        ).join(UserLineRelp, JOIN.LEFT_OUTER,
-               on=(Userinfo.id == UserLineRelp.userId)
-               ).join(
-            Userline,
-            JOIN.LEFT_OUTER,
-            on=(Userline.id ==
-                UserLineRelp.lineId)
-        ).join(
-            UserPostRelp,
-            JOIN.LEFT_OUTER,
-            on=(
-                    Userinfo.id ==
-                    UserPostRelp.userId)
-        ).join(
-            Userpost,
-            JOIN.LEFT_OUTER,
-            on=(Userpost.id == UserPostRelp.postId)
+            Userrole.role_name.alias('role_name')
+        # ).join(UserLineRelp, JOIN.LEFT_OUTER,
+        #        on=(Userinfo.id == UserLineRelp.userId)
+        #        ).join(
+        #     Userline,
+        #     JOIN.LEFT_OUTER,
+        #     on=(Userline.id ==
+        #         UserLineRelp.lineId)
+        # ).join(
+        #     UserPostRelp,
+        #     JOIN.LEFT_OUTER,
+        #     on=(
+        #             Userinfo.id ==
+        #             UserPostRelp.userId)
+        # ).join(
+        #     Userpost,
+        #     JOIN.LEFT_OUTER,
+        #     on=(Userpost.id == UserPostRelp.postId)
         ).join(
             UserRoleRelp,
             JOIN.LEFT_OUTER,
-            on=(Userinfo.id ==
-                UserRoleRelp.userId)
+            on=(Userinfo.user_id ==
+                UserRoleRelp.user_id)
         ).join(
             Userrole,
             JOIN.LEFT_OUTER,
-            on=(Userrole.id ==
-                UserRoleRelp.roleId)
+            on=(Userrole.role_id ==
+                UserRoleRelp.role_id)
         ).join(
             Department,
             JOIN.LEFT_OUTER,
-            on=(Userinfo.oraCode ==
-                Department.id)
-        ).join(
-            Level,
-            JOIN.LEFT_OUTER,
-            on=(Userinfo.level ==
-                Level.id)
-        ).group_by(Userinfo.id).where(Userinfo.id == id).dicts())
+            on=(Userinfo.dept_id ==
+                Department.dept_id)
+        # ).join(
+        #     Level,
+        #     JOIN.LEFT_OUTER,
+        #     on=(Userinfo.level ==
+        #         Level.id)
+        ).group_by(Userinfo.user_id).where(Userinfo.user_id == user_id).dicts())
 
         # result = model_to_dict(db)
         result = list(db)
@@ -426,19 +427,33 @@ class Userinfo(BaseModel):
     # 通过id查询用户角色信息
 
     @classmethod
-    async def select_user_role(cls, id: int):
+    async def select_user_role(cls, user_id: int):
+        """获取用户的角色ID"""
+        try:
+            result = await async_db.execute(
+            Userinfo.select(
+                            Userinfo.user_id,
+                            UserRoleRelp.role_id.alias('role_id'),
+                            Userrole.role_name.alias('role_name'),
+                            )
+            .join(
+                UserRoleRelp,
+                JOIN.LEFT_OUTER,
+                on=(Userinfo.user_id ==
+                    UserRoleRelp.user_id)
+            ).join(
+                Userrole,
+                JOIN.LEFT_OUTER,
+                on=(Userrole.role_id ==
+                    UserRoleRelp.role_id)
+            ).group_by(Userinfo.user_id).where(Userinfo.user_id == user_id).dicts())
+            if len(result)>0:
+                result=result[0]
 
-        result = await async_db.execute(UserRoleRelp.select(UserRoleRelp.roleId).where(
-            UserRoleRelp.userId == id).dicts())
-        result = await async_db.execute(Userinfo.select(UserRoleRelp.roleId).join(UserRoleRelp, JOIN.LEFT_OUTER,
-                                                                                  on=(
-                                                                                          Userinfo.id == UserRoleRelp.userId)).where(
-            UserRoleRelp.userId == id).dicts())
-        result = list(result)
-        print('result')
-        print(result)
+        except Exception as e:
+            print(f"查询用户角色失败: {e}")
         return result
-
+    
     @classmethod
     async def fuzzy_query(cls, queryuserinfo):
 
@@ -468,63 +483,69 @@ class Userinfo(BaseModel):
         # user line post联表查询
         db = await async_db.execute(Userinfo.select(
             Userinfo,
-            fn.group_concat(Userline.name).python_value(
-                convert_arr).alias('line'),
-            fn.group_concat(Userpost.name).python_value(
-                convert_arr).alias('post'),
-            UserRoleRelp.roleId.alias('userRoleId'),
-            Userrole.roleName.alias('userRole'),
-
-            Department.name.alias('oraCode')
-        ).join(UserLineRelp,
-               JOIN.LEFT_OUTER,
-               on=(Userinfo.id == UserLineRelp.userId)
-               ).join(
-            Userline,
-            JOIN.LEFT_OUTER,
-            on=(Userline.id ==
-                UserLineRelp.lineId)
-        ).join(
-            UserPostRelp,
-            JOIN.LEFT_OUTER,
-            on=(Userinfo.id ==
-                UserPostRelp.userId)
-        ).join(
-            Userpost,
-            JOIN.LEFT_OUTER,
-            on=(Userpost.id == UserPostRelp.postId)
+            # fn.group_concat(Userline.name).python_value(
+            #     convert_arr).alias('line'),
+            # fn.group_concat(Userpost.name).python_value(
+            #     convert_arr).alias('post'),
+            UserRoleRelp.role_id.alias('role_id'),
+            Userrole.role_name.alias('role_name'),
+            Department.dept_id.alias('dept_id'),
+            Department.dept_name.alias('dept_name')
+        # ).join(UserLineRelp,
+        #        JOIN.LEFT_OUTER,
+        #        on=(Userinfo.id == UserLineRelp.userId)
+        #        ).join(
+        #     Userline,
+        #     JOIN.LEFT_OUTER,
+        #     on=(Userline.id ==
+        #         UserLineRelp.lineId)
+        # ).join(
+        #     UserPostRelp,
+        #     JOIN.LEFT_OUTER,
+        #     on=(Userinfo.id ==
+        #         UserPostRelp.userId)
+        # ).join(
+        #     Userpost,
+        #     JOIN.LEFT_OUTER,
+        #     on=(Userpost.id == UserPostRelp.postId)
         ).join(
             UserRoleRelp,
             JOIN.LEFT_OUTER,
-            on=(Userinfo.id ==
-                UserRoleRelp.userId)
+            on=(Userinfo.user_id ==
+                UserRoleRelp.user_id)
         ).join(
             Userrole,
             JOIN.LEFT_OUTER,
-            on=(Userrole.id ==
-                UserRoleRelp.roleId)
+            on=(Userrole.role_id ==
+                UserRoleRelp.role_id)
         ).join(
             Department,
             JOIN.LEFT_OUTER,
-            on=(Userinfo.oraCode ==
-                Department.id)
-        ).group_by(Userinfo.id).order_by(Userinfo.updateAt.desc()).where(
+            on=(Userinfo.dept_id ==
+                Department.dept_id)
+        ).group_by(Userinfo.user_id).order_by(Userinfo.update_at.desc()).where(
             Userinfo.account.contains(queryuserinfo.account) if queryuserinfo.account else True,
-            Userinfo.realName.contains(queryuserinfo.realName) if queryuserinfo.realName else True,
-            Userinfo.phone.contains(queryuserinfo.phone) if queryuserinfo.phone else True,
+            Userinfo.user_name.contains(queryuserinfo.user_name) if queryuserinfo.user_name else True,
+            Userinfo.nick_name.contains(queryuserinfo.nick_name) if queryuserinfo.nick_name else True,
+            Userinfo.phonenumber.contains(queryuserinfo.phonenumber) if queryuserinfo.phonenumber else True,
             Userinfo.email.contains(queryuserinfo.email) if queryuserinfo.email else True,
             Userinfo.sex.contains(queryuserinfo.sex) if queryuserinfo.sex else True,
-            Userinfo.userRoleId == queryuserinfo.userRole if queryuserinfo.userRole else True
             # Userrole.roleName.contains(queryuserinfo.userRole)if queryuserinfo.userRole else True
-        ).order_by(Userinfo.updateAt.desc()).dicts())
+        ).order_by(Userinfo.update_at.desc()).dicts())
         # and Userrole.roleName.contains(queryuserinfo.userRole)
         # db.where(  db)
         # result = list(db.offset((queryuserinfo.current - 1) *
         #                         queryuserinfo.pageSize).limit(queryuserinfo.pageSize).dicts())
         if db:
             result = list(db)
-        else:
-            result = []
+            # 移除每个用户记录中的 password 字段
+            for user in result:
+                if 'password' in user:
+                    del user['password']
+                if 'createAt' in user:
+                    del user['createAt']
+                if 'updateAt' in user:
+                    del user['updateAt']
         return result
 
     @classmethod

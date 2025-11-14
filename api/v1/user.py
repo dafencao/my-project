@@ -279,34 +279,25 @@ async def edit_user(
 ) -> Any:
     req.update_at = datetime.strftime(
         datetime.now(pytz.timezone('Asia/Shanghai')), '%Y-%m-%d %H:%M:%S')
-    role_id = req.role_id
     user_id = req.user_id
     # TODO:userRoleId
 
     lastUserInfo =await Userinfo.select_by_id(req.user_id)
-    # print('lastUserInfo')
-    # print(lastUserInfo)
     user = dict(req)
     user = dict_to_model(Userinfo, user)
-    # try:
     if True:
         async with db.atomic_async():
             result =await Userinfo.update_user(user)
             if lastUserInfo['role_id'] != req.role_id:
-                # result = list(UserRoleRelp.select().where(UserRoleRelp.userId == req.userRoleId).dicts())
-                result = await UserRoleRelp.select_by_userId(req.userRoleId)
+                result = await UserRoleRelp.select_by_userId(req.user_id)
                 if len(result) == 0:
-                    print("##########################")
-                    print(req)
-                    data_dict = {'roleId': req.userRoleId, 'userId': req.id, 'updateAt': datetime.strftime(
+                    data_dict = {'role_id': req.role_id, 'user_id': req.user_id, 'update_at': datetime.strftime(
                         datetime.now(pytz.timezone('Asia/Shanghai')), '%Y-%m-%d %H:%M:%S')}
                     await UserRoleRelp.add(data_dict)
                 else:
-                    # UserRoleRelp.update({UserRoleRelp.roleId: userinfo.userRoleId}).where(
-                    #     UserRoleRelp.userId == userinfo.id).execute()
-                    UserRoleRelp.update({'roleId': req.userRoleId}).where(
-                        UserRoleRelp.userId == user_id).execute()
-                    relp = dict_to_model(UserRoleRelp, {'userId': user_id, 'roleId': req.userRoleId})
+                    UserRoleRelp.update({'role_id': req.user_id}).where(
+                        UserRoleRelp.user_id == user_id).execute()
+                    relp = dict_to_model(UserRoleRelp, {'user_id': user_id, 'role_id': req.role_id})
                     await UserRoleRelp.update_by_model(relp)
 
             # if req.line and lastUserInfo['lineIds'] != req.line:
@@ -344,16 +335,11 @@ async def edit_user(
 
 
 # /sys/list,
-#
+
 @router.post("/show", summary="根据条件筛选用户记录", name="查询用户列表", dependencies=[Depends(get_db)])
 async def show_user(queryuserinfo: sys_user_schema.UserQuery) -> Any:
-    # print('show queryuserinfo')
-    # print(queryuserinfo)
-    item_dict = dict(queryuserinfo)
     try:
         result =await Userinfo.fuzzy_query(queryuserinfo)
-        # print('result')
-        # print(result)
         total = len(result)
         result = result[(queryuserinfo.current - 1) *
                         queryuserinfo.pageSize:(queryuserinfo.current) * queryuserinfo.pageSize]
@@ -361,12 +347,11 @@ async def show_user(queryuserinfo: sys_user_schema.UserQuery) -> Any:
     except Exception as e:
         print(e)
         return resp.fail(resp.DataNotFound, detail=str(e))
-    pass
 
 
-@router.get("/get/{id}", summary="根据id查看用户详细信息", name="获取用户信息")
-async def query_user_id(id: str):
-    result =await Userinfo.select_by_id(id)
+@router.get("/get/{user_id}", summary="根据id查看用户详细信息", name="获取用户信息")
+async def query_user_id(user_id: str):
+    result =await Userinfo.select_by_id(user_id)
     # result = User.get_user_by_id(1)
     result.pop('password')
     result.pop('createAt')
@@ -380,10 +365,8 @@ async def query_user_id(id: str):
 
 
 @router.post("/role", summary="根据id查看用户角色信息", name="获取用户信息")
-async def query_user_id(id: int):
-    result =await Userinfo.select_user_role(id)
-    # result = User.get_user_by_id(1)
-    # print(result)
+async def query_user_id(user_id: int):
+    result =await Userinfo.select_user_role(user_id)
     if result:
         return resp.ok(data=result)
     else:
@@ -396,18 +379,16 @@ async def query_user_id(id: int):
 async def update_password(req: sys_user_schema.UserUpdatePwd,
                     # current_user: Userinfo = Depends(deps.get_current_userinfo)
                     ) -> Any:
-    req.updateAt = datetime.strftime(
+    req.update_at = datetime.strftime(
         datetime.now(pytz.timezone('Asia/Shanghai')), '%Y-%m-%d %H:%M:%S')
     current_user =await Userinfo.single_by_account(req.account)
-    # print('current_user')
-    # print(current_user)
     oldHashedPassword = current_user['password']
     oldpassword = req.oldPassword
     if not security.verify_password(oldpassword, oldHashedPassword):
         return resp.fail(resp.DataUpdateFail.set_msg("密码错误"))
     req.password = security.get_password_hash(req.password)
     item_dict = {
-        'id': current_user['id'],
+        'user_id': current_user['user_id'],
         'account': current_user['account'],
         'password': req.password
     }
@@ -421,20 +402,13 @@ async def update_password(req: sys_user_schema.UserUpdatePwd,
 
 @router.put("/sys/changePassword", summary="管理员修改用户密码", name="管理员修改用户密码")
 def update_password(req: sys_user_schema.UserUpdatePwd,
-                    # current_user: Userinfo = Depends(deps.get_current_userinfo)
                     ) -> Any:
-    req.updateAt = datetime.strftime(
+    req.update_at = datetime.strftime(
         datetime.now(pytz.timezone('Asia/Shanghai')), '%Y-%m-%d %H:%M:%S')
-    # print('current_user')
-    # print(current_user)
-    # password = current_user["password"]
-    # account = current_user["account"]
     password = security.get_password_hash(req.password)
-    # print('password')
-    # print(password)
 
     item_dict = {
-        'id': req.id,
+        'user_id': req.user_id,
         'account': req.account,
         'password': password,
     }

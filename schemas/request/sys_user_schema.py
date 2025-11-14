@@ -26,16 +26,18 @@ from utils.tools_func import tz
 class UserBase(BaseModel):
     # id: str
 
-    account:  Optional[str]
-    email: Optional[EmailStr] = None
-    realName: Optional[str] = ''
-    sex: Optional[str] = ''
-    phone: Optional[str] = ''
-    oraCode: Optional[int] = None
-    jobAge: Optional[str] = ''
-    level: Optional[int] = ''
-    userRoleId: Optional[int] = None
-    birthday: Optional[datetime] = None
+    user_id: str
+    dept_id: Optional[int] = Field(None, description="部门ID")
+    role_id: Optional[int] = Field(None, description="角色ID")
+    account: Optional[str] = Field(None,description='用户账号')
+    user_name: Optional[str] = Field(None, max_length=30, description="用户真实姓名")
+    nick_name: Optional[str] = Field(None,description='用户昵称')
+    user_type: Optional[str] = Field(None, max_length=2, description="用户类型")
+    email: Optional[str] = Field(None, max_length=50, description="邮箱")
+    phonenumber: Optional[str] = Field(None, max_length=11, description="手机号")
+    sex: Optional[str] = Field(None, pattern=r'^[012]$', description="性别")
+    avatar: Optional[str] = Field(None, max_length=100, description="头像地址")
+    update_at: Optional[datetime] = None
 
 
 # class UserQuery(UserBase):
@@ -47,12 +49,12 @@ class UserBase(BaseModel):
 class UserQuery(BaseModel):
     # id: Optional[str] = ""
     # account: Optional[str] = ""
-    account: Optional[str] = None
-    realName: Optional[str] = None
-    phone: Optional[str] = None
-    email: Optional[str] = None
-    userRole: Optional[str] = None
-    sex: Optional[str] = None
+    account: Optional[str] = Field(None,description='用户账号')
+    user_name: Optional[str] = Field(None, max_length=30, description="用户真实姓名")
+    nick_name: Optional[str] = Field(None,description='用户昵称')
+    email: Optional[str] = Field(None, max_length=50, description="邮箱")
+    phonenumber: Optional[str] = Field(None, max_length=11, description="手机号")
+    sex: Optional[str] = Field(None, pattern=r'^[012]$', description="性别")
 
     current: int = 1  # 页码
     pageSize: int = 5  # 每页条数
@@ -115,7 +117,6 @@ class UsersCreate(BaseModel):
     birthday: Union[datetime,date] = None
     post: List[str] = None
     line: List[str] = None
-    createAt: Optional[datetime] = None
 
     @validator('phone')
     def is_phone(cls, tel):
@@ -133,19 +134,7 @@ class UsersCreate(BaseModel):
 
 
 class UserUpdate(UserBase):
-    user_id: str
-    dept_id: Optional[int] = Field(None, description="部门ID")
-    role_id: Optional[int] = Field(None, description="角色ID")
-    # password: Optional[str] = None
-    account: Optional[str] = Field(None,description='用户账号')
-    user_name: Optional[str] = Field(None, max_length=30, description="用户真实姓名")
-    nick_name: Optional[str] = Field(None,description='用户昵称')
-    user_type: Optional[str] = Field(None, max_length=2, description="用户类型")
-    email: Optional[str] = Field(None, max_length=50, description="邮箱")
-    phonenumber: Optional[str] = Field(None, max_length=11, description="手机号")
-    sex: Optional[str] = Field(None, pattern=r'^[012]$', description="性别")
-    avatar: Optional[str] = Field(None, max_length=100, description="头像地址")
-    update_at: Optional[datetime] = None
+    
 
     # lastUserInfo: Optional[str]
 
@@ -154,11 +143,12 @@ class UserUpdate(UserBase):
 
 
 class UserUpdatePwd(BaseModel):
-    id: Optional[str]
-    account: Optional[str]
+    user_id: Optional[str] = ''
+    account: Optional[str] = ''
     oldPassword: Optional[str] = None  # 管理员修改用户密码时不需要旧密码
-    password: Optional[str]
-    updateAt: Optional[datetime] = datetime.now(pytz.timezone('Asia/Shanghai'))
+    password: Optional[str] = ''
+    update_at:datetime = None
+
 
 
 class UserInDBBase(UserBase):
