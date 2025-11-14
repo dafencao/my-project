@@ -43,6 +43,8 @@ from api.v1.audit import router as audit_router
 from api.v1.intro_control import router as intro_control_router
 # from api.v1.jaka import router as jaka_control_router
 from api.v1.line_deep import router as line_deep_router
+from api.v1.material import router as material_router
+
 
 api_v1_router = APIRouter()
 
@@ -91,3 +93,5 @@ api_v1_router.include_router(
 # # api_v1_router.include_router(scheduler_router, tags=["任务调度"])
 
 # api_v1_router.include_router(scheduler_router, tags=["任务调度"])
+api_v1_router.include_router(
+    material_router, prefix="/api", tags=["焊接母材信息"])

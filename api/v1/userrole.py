@@ -23,7 +23,7 @@ from models.userrole import Permission, RoleMenuRelp, RolePermRelp, Userrole
 from common import deps, logger
 from common.session import db, async_db
 from core import security
-from fastapi import APIRouter, Depends, HTTPException, Form,HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Form, status
 from datetime import datetime, timedelta
 from typing import Any,List
 from schemas.response import resp
