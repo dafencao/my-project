@@ -1,5 +1,5 @@
 from common.session import BaseModel, paginator, db, async_db
-from peewee import CharField, IntegerField, DecimalField
+from peewee import CharField, IntegerField, DecimalField, DoesNotExist
 from playhouse.shortcuts import model_to_dict, dict_to_model
 from sqlalchemy.orm import relationship
 from peewee import IntegrityError
@@ -229,4 +229,35 @@ class MaterialInfo(BaseModel):
             
         except Exception as e:
             print(f"查询所有母材失败: {e}")
+            raise e
+        
+
+    @classmethod
+    async def get_material_by_id(cls, material_id: str):
+        """
+        根据材料ID获取母材信息
+        """
+        try:
+            # 明确指定要查询的字段，排除基类字段
+            query = cls.select(
+                cls.material_id,
+                cls.base_material,
+                cls.material_grade,
+                cls.chemical_composition,
+                cls.tensile_strength,
+                cls.hardness,
+                cls.melting_point,
+                cls.thermal_conductivity,
+                cls.filler_wire_spec,
+                cls.shielding_gas_type,
+                cls.shielding_gas_purity
+            ).where(cls.material_id == material_id)
+            
+            material = await async_db.get(query)
+            return material
+            
+        except DoesNotExist:
+            return None
+        except Exception as e:
+            print(f"根据ID查询材料失败: {e}")
             raise e

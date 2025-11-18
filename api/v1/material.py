@@ -27,7 +27,7 @@ async def add_material_info(
 
 
 @router.delete("/material/delete", summary="删除一个母材", name="删除一个母材", dependencies=[Depends(get_db)])
-async def del_department(
+async def del_material(
     material_id : str
 ) -> Any:
     try:
