@@ -3,7 +3,7 @@
 """
 
 from common.session import BaseModel, paginator, db, async_db
-from peewee import CharField, IntegerField, BigAutoField,BigIntegerField,DateTimeField
+from peewee import CharField, BigAutoField,BigIntegerField
 from playhouse.shortcuts import model_to_dict, dict_to_model
 from sqlalchemy.orm import relationship
 from peewee import fn, SQL
@@ -51,8 +51,8 @@ class Department(BaseModel):
         return result.id
 
     @classmethod
-    async def del_by_department_id(cls, id):
-        await async_db.execute(Department.delete().where(Department.dept_id == id))
+    async def del_by_department_id(cls, dept_id):
+        await async_db.execute(Department.delete().where(Department.dept_id == dept_id))
 
     @classmethod
     async def update_department(cls, department):

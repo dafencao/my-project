@@ -51,6 +51,7 @@ BusinessError: Resp = Resp(1003, "业务错误", http_status.HTTP_400_BAD_REQUES
 DataNotFound: Resp = Resp(1004, "查询失败", http_status.HTTP_400_BAD_REQUEST)
 DataStoreFail: Resp = Resp(1005, "新增失败", http_status.HTTP_400_BAD_REQUEST)
 DataUpdateFail: Resp = Resp(1006, "更新失败", http_status.HTTP_400_BAD_REQUEST)
+DataQueryFail = Resp(1006, "数据查询失败", http_status.HTTP_400_BAD_REQUEST)
 DataDestroyFail: Resp = Resp(1007, "删除失败", http_status.HTTP_400_BAD_REQUEST)
 PermissionDenied: Resp = Resp(1008, "权限拒绝", http_status.HTTP_403_FORBIDDEN)
 ServerError: Resp = Resp(
