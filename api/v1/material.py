@@ -87,7 +87,7 @@ async def search_materials(
         print(f"筛选母材失败: {e}")
         # 正确的调用方式
         return resp.fail(resp.DataQueryFail.set_msg(f"数据查询失败: {str(e)}"))
-    
+
 
 @router.get("/material/showall",summary='查询所有母材',name='查询所有母材')
 async def get_all_materials() -> Any:

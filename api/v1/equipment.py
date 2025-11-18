@@ -60,12 +60,12 @@ async def edit_equipment(
 
 @router.get("/equipment/showall",summary='查询所有设备',name='查询所有设备')
 async def get_all_materials() -> Any:
-    """获取所有部门"""
+    """获取所有设备"""
     try:
         result = await EquipmentParam.select_all()
         return resp.ok(data=result)
     except Exception as e:
-        print(f"查询所有母材失败: {e}")
+        print(f"查询所有设备失败: {e}")
         return resp.fail(resp.DataNotFound, detail=str(e))
 
 
@@ -79,7 +79,7 @@ async def search_equipment(
     根据条件筛选激光焊接设备信息
     
     - **filter_params**: 筛选条件
-    - **page**: 页码，从1开始
+    - **page**: 页码,从1开始
     - **page_size**: 每页数量
     """
     try:

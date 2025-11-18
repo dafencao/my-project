@@ -45,6 +45,7 @@ from api.v1.intro_control import router as intro_control_router
 from api.v1.line_deep import router as line_deep_router
 from api.v1.material import router as material_router
 from api.v1.equipment import router as equipment_router
+from api.v1.process_design import router as prrcess_router
 
 
 api_v1_router = APIRouter()
@@ -98,3 +99,5 @@ api_v1_router.include_router(
     material_router, prefix="/api", tags=["焊接母材信息"])
 api_v1_router.include_router(
     equipment_router, prefix="/api", tags=["焊接装置信息"])
+api_v1_router.include_router(
+    prrcess_router, prefix="/api", tags=["焊接工艺设计"])

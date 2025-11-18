@@ -261,3 +261,4 @@ class MaterialInfo(BaseModel):
         except Exception as e:
             print(f"根据ID查询材料失败: {e}")
             raise e
+    
