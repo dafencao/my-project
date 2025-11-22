@@ -2,7 +2,6 @@ from models.process_design import ProcessDesign
 from fastapi import APIRouter, Depends
 from typing import Any
 from schemas.response import resp
-from playhouse.shortcuts import model_to_dict, dict_to_model
 from peewee import fn, IntegrityError
 from schemas.request import processDesign_schema
 from common.session import get_db
@@ -57,12 +56,43 @@ async def edit_process(
     return resp.ok(data=result)
 
 
-@router.get("/process/showall",summary='查询所有工艺',name='查询所有工艺')
-async def get_all_processs() -> Any:
-    """获取所有工艺"""
+@router.get("/process/showall", summary='查询所有工艺', name='查询所有工艺')
+async def get_all_processs(
+    page: int = 1,
+    page_size: int = 20, 
+) -> Any:
+    """获取所有工艺（分页）"""
     try:
-        result = await ProcessDesign.select_all()
+        result = await ProcessDesign.select_all(page=page, page_size=page_size)
         return resp.ok(data=result)
     except Exception as e:
         print(f"查询所有工艺失败: {e}")
         return resp.fail(resp.DataNotFound, detail=str(e))
+    
+
+@router.post("/process/search", summary="条件筛选焊接工艺", name="按条件筛选焊接工艺信息")
+async def search_process(
+    filter_params: processDesign_schema.ProcessDesignFilter,
+    page: int = 1,
+    page_size: int = 20
+) -> Any:
+    """
+    根据条件筛选焊接工艺信息
+    
+    - **filter_params**: 筛选条件
+    - **page**: 页码,从1开始
+    - **page_size**: 每页数量
+    """
+    try:
+        # 执行筛选
+        result = await ProcessDesign.select_with_filter(
+            filter_params=filter_params,
+            page=page,
+            page_size=page_size
+        )
+        
+        return resp.ok(data=result)
+        
+    except Exception as e:
+        print(f"筛选工艺失败: {e}")
+        return resp.fail(resp.DataQueryFail.set_msg(f"数据查询失败: {str(e)}"))

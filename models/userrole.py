@@ -5,7 +5,7 @@
 """
 
 from common.session import BaseModel, paginator, db, async_db
-from peewee import CharField, IntegerField, TimeField,DateTimeField
+from peewee import CharField, IntegerField, BigIntegerField,DateTimeField
 from playhouse.shortcuts import model_to_dict, dict_to_model
 from sqlalchemy.orm import relationship
 
@@ -22,9 +22,9 @@ class RoleMenuRelp(BaseModel):
     """
     角色菜单关系表/权限表
     """
-    id = IntegerField(primary_key=True)
-    role_id = IntegerField(column_name='role_id')
-    menu_id = IntegerField(column_name='menu_id')
+    id = BigIntegerField(primary_key=True)
+    role_id = BigIntegerField(column_name='role_id')
+    menu_id = BigIntegerField(column_name='menu_id')
     class Meta:
         table_name = 'sys_role_menu'
 

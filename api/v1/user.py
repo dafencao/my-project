@@ -19,8 +19,11 @@ from logic.user_logic import UserInfoLogic
 from schemas.request import sys_user_schema
 from common.session import db, get_db
 from utils.tools_func import rolePremission, tz
-from logic.user_logic import get_current_user,get_current_user_for_logout
+from logic.user_logic import get_current_user_for_logout
 from common.sys_redis import redis_client
+from common import deps
+
+
 
 router = APIRouter()
 
@@ -78,7 +81,7 @@ async def login_access_token(
         if "账号不存在" in error_msg or "密码错误" in error_msg:
             return resp.fail(resp.Unauthorized.set_msg(error_msg))
         else:
-            return resp.fail(resp.InternalServerError.set_msg("系统内部错误"))
+            return resp.fail(resp.ServerError.set_msg("系统内部错误"))
         
 
 @router.post("/logout", summary="用户登出", name="登出")
@@ -89,31 +92,48 @@ async def logout_access_token(
     用户登出 - 清除Redis中的登录状态
     """
     try:
-        user_id = current_user.get('user_id')
-        token = current_user.get('token')
+        user_info = current_user.get('user_info')
+        token = current_user.get('token') 
         
-        if not user_id or not token:
+        if not user_info or not token:
             return resp.fail(resp.Unauthorized.set_msg("用户未登录或token无效"))
+        
+        user_id = user_info.get('user_id')
+        account = user_info.get('account')
+        
+        if not user_id:
+            return resp.fail(resp.Unauthorized.set_msg("用户信息不完整"))
         
         # 清除Redis中的登录状态
         user_key = f"user:{user_id}"
         token_key = f"token:{token}"
         
         # 删除两个映射
-        redis_client.delete(user_key)
-        redis_client.delete(token_key)
+        try:
+            redis_client.delete(user_key)
+            redis_client.delete(token_key)
+            print(f"用户登出成功: user_id={user_id}, account={account}")
+        except Exception as redis_error:
+            print(f"Redis清除失败: {redis_error}")
+            # Redis操作失败不影响登出响应，但记录日志
         
         return resp.ok(msg="登出成功")
-        
-    except Exception as e:
-        return resp.fail(resp.InternalServerError.set_msg("登出失败"))
     
+    except HTTPException as http_exc:
+        # 传递HTTP异常
+        if http_exc.status_code == 401:
+            return resp.fail(resp.Unauthorized.set_msg(http_exc.detail))
+        else:
+            return resp.fail(resp.ServerError.set_msg(http_exc.detail))
+    except Exception as e:
+        print(f"登出接口异常: {str(e)}")
+        return resp.fail(resp.ServerError.set_msg("系统内部错误"))
 
 
 @router.get("/currentUser", summary="获取用户信息", name="获取用户信息")
 async def get_current_userinfo(
         *,
-        current_user: Userinfo = Depends(get_current_user),
+        current_user: Userinfo = Depends(deps.get_current_userinfo),
         # Referer: dict = Depends(deps.save_user_action)
 
 ) -> Any:
@@ -434,46 +454,46 @@ async def get_user_permission_by_token(
     # TODO:获取账户菜单信息 格式处理
     # user=>role
     # print(current_userinfo)
-    role = current_userinfo['userRoleId']
+    role = current_userinfo['role_id']
     # role = current_userinfo['selectedRoles']
-    result =await RoleMenuRelp.select_by_role_id(role)
-    menuIds = result['menuIds']
+    result =await RoleMenuRelp.selectMenu_by_role_id(role)
+    menuIds = result['menu_ids']
     menuList =  await Usermenu.select_by_ids(menuIds)
     # print(menuList)
     menuList = sorted(menuList, key=lambda e: (e.__getitem__(
-        'menuType'), e.__getitem__('sortNo')), reverse=False)
+        'menu_type'), e.__getitem__('sortNo')), reverse=False)
     # print(menuList)
 
     result = {}
     result['menu'] = []
     for menu in menuList:
-        if menu['parentId'] == None or menu['parentId'] == 0:
+        if menu['parent_id'] == None or menu['parent_id'] == 0:
             temp = {}
-            temp['id'] = menu['id']
+            temp['menu_id'] = menu['menu_id']
             temp['path'] = menu['url']
             temp['component'] = menu['component']
             temp['meta'] = {
                 'icon': menu['icon'],
                 'keepAlive': menu['keepAlive'],
-                'title': menu['name'],
+                'title': menu['menu_name'],
             }
             temp['children'] = []
             result['menu'].append(temp)
     # print("result['menu']")
     # print(result['menu'])
     for menu in menuList:
-        if (menu['parentId'] != None or menu['parentId'] != 0) and menu['menuType'] != 0:
+        if (menu['parent_id'] != None or menu['parent_id'] != 0) and menu['menu_type'] != 0:
             temp = {}
-            temp['id'] = menu['id']
+            temp['menu_id'] = menu['menu_id']
             temp['path'] = menu['url']
             temp['component'] = menu['component']
             temp['meta'] = {
                 'icon': menu['icon'],
                 'keepAlive': menu['keepAlive'],
-                'title': menu['name'],
+                'title': menu['menu_name'],
             }
             for menu1 in result['menu']:
-                if menu1['id'] == menu['parentId']:
+                if menu1['menu_id'] == menu['parent_id']:
                     # print("menu1['id']")
                     # print(menu1)
                     menu1['children'].append(temp)

@@ -11,7 +11,7 @@ from models.equipment import EquipmentParam
 router = APIRouter()
 
 
-@router.post("/equipment/add", summary="添加设备", name="新增一条设备信息")
+@router.post("/equipment/add", summary="添加激光焊接设备", name="新增一条设备信息")
 async def add_material_info(
         req: equipment_schema.EquipmentParamBase
 ) -> Any:
@@ -27,7 +27,7 @@ async def add_material_info(
     return resp.ok(data=result)
 
 
-@router.delete("/equipment/delete", summary="删除设备", name="删除设备", dependencies=[Depends(get_db)])
+@router.delete("/equipment/delete", summary="删除激光焊接设备", name="删除激光焊接设备", dependencies=[Depends(get_db)])
 async def del_equipment(
     equipment_id : str
 ) -> Any:
@@ -39,7 +39,7 @@ async def del_equipment(
     return resp.ok(data=result)
 
 
-@router.put("/equipment/edit", summary="编辑设备", name="编辑设备")
+@router.put("/equipment/edit", summary="编辑激光焊接设备", name="编辑激光焊接设备")
 async def edit_equipment(
     equipment: equipment_schema.EquipmentParamUpdate,
 ) -> Any:
@@ -58,7 +58,7 @@ async def edit_equipment(
     return resp.ok(data=result)
 
 
-@router.get("/equipment/showall",summary='查询所有设备',name='查询所有设备')
+@router.get("/equipment/showall",summary='查询所有激光焊接设备',name='查询所有激光焊接设备')
 async def get_all_materials() -> Any:
     """获取所有设备"""
     try:
@@ -69,7 +69,7 @@ async def get_all_materials() -> Any:
         return resp.fail(resp.DataNotFound, detail=str(e))
 
 
-@router.post("/equipment/search", summary="条件筛选设备", name="按条件筛选激光焊接设备信息")
+@router.post("/equipment/search", summary="条件筛选激光焊接设备", name="按条件筛选激光焊接设备信息")
 async def search_equipment(
     filter_params: equipment_schema.EquipmentFilter,
     page: int = 1,

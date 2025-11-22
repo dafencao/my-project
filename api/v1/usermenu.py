@@ -11,10 +11,10 @@ from common.session import get_db
 
 from core import security
 from models.usermenu import Usermenu
-from common import deps, logger
+from common import logger
 from schemas.response import resp
 from schemas.request import sys_usermenu_schema
-from playhouse.shortcuts import model_to_dict, dict_to_model
+from playhouse.shortcuts import dict_to_model
 from peewee import fn
 
 router = APIRouter()
@@ -55,15 +55,21 @@ async def del_usermenu(
         # 转换为整数
         menu_ids = [int(id) for id in usermenu_ids]
 
+        # 检查是否传入了菜单ID
+        if not menu_ids:
+            return resp.fail(resp.InvalidParams.set_msg("请选择要删除的菜单"))
+
         # 执行删除操作
         result = await Usermenu.del_by_usermenu_ids(menu_ids)
         
-        # 检查删除结果
-        if result == 0:
-            return {"success": True, "code": 200, "data": result, "msg": f"成功删除 {result} 个菜单"}
+        # 统一返回格式
+        return resp.ok(data=result, msg=f"成功删除 {result} 个菜单")
         
+    except ValueError as e:
+        return resp.fail(resp.InvalidParams.set_msg("菜单ID格式错误"))
     except Exception as e:
-        return {"success": False, "code": 500, "msg": f"删除失败: {str(e)}", "data": None}
+        logger.error(f"批量删除菜单失败: {str(e)}")
+        return resp.fail(resp.ServerError.set_msg(f"删除失败: {str(e)}"))
 
 
 @router.put("/sys/menu/edit", summary="编辑菜单", name="编辑菜单")
@@ -73,7 +79,7 @@ async def edit_menu(
     menu.update_at = datetime.strftime(
         datetime.now(pytz.timezone('Asia/Shanghai')), '%Y-%m-%d %H:%M:%S')
     print(menu)
-    if menu.menu_type == 'M':
+    if menu.menu_type == 1:
         menu.parent_id = 0
     menu = dict_to_model(Usermenu,  dict(menu))
 
@@ -92,14 +98,14 @@ async def show_user(req: sys_usermenu_schema.MenuQuery,) -> Any:
     result =await Usermenu.fuzzy_query(req)
     addList = []
     for menu in result:
-        if not (menu['parentId'] == None or menu['parentId'] == 0):
-            addList.append(menu['parentId'])
+        if not (menu['parent_id'] == None or menu['parent_id'] == 0):
+            addList.append(menu['parent_id'])
     # addResult = list(Usermenu.select().where(Usermenu.id.in_(addList)).dicts())
     addResult = await Usermenu.select_by_ids(addList)
     for item in addResult:
         flag = True
         for res in result:
-            if item['id'] == res['id']:
+            if item['menu_id'] == res['menu_id']:
                 flag = False
                 break
         if flag:
@@ -113,14 +119,14 @@ async def show_user(req: sys_usermenu_schema.MenuQuery,) -> Any:
 
     result = []
     for menu in menuList:
-        if menu['parentId'] == None or menu['parentId'] == 0:
+        if menu['parent_id'] == None or menu['parent_id'] == 0:
             temp = {}
-            temp['id'] = menu['id']
+            temp['menu_id'] = menu['menu_id']
             temp['url'] = menu['url']
             temp['component'] = menu['component']
-            temp['name'] = menu['name']
+            temp['menu_name'] = menu['menu_name']
             temp['icon'] = menu['icon']
-            temp['menuType'] = menu['menuType']
+            temp['menu_type'] = menu['menu_type']
             temp['sortNo'] = menu['sortNo']
 
             temp['children'] = []
@@ -129,22 +135,22 @@ async def show_user(req: sys_usermenu_schema.MenuQuery,) -> Any:
     # print('result')
     # print(result)
     for menu in menuList:
-        if menu['parentId'] != None or menu['parentId'] != 0:
+        if menu['parent_id'] != None or menu['parent_id'] != 0:
             # print(menu['name'])
             temp = {}
-            temp['id'] = menu['id']
-            temp['parentId'] = menu['parentId']
+            temp['menu_id'] = menu['menu_id']
+            temp['parent_id'] = menu['parent_id']
             temp['url'] = menu['url']
             temp['component'] = menu['component']
-            temp['name'] = menu['name']
+            temp['menu_name'] = menu['menu_name']
             temp['icon'] = menu['icon']
-            temp['menuType'] = menu['menuType']
+            temp['menu_type'] = menu['menu_type']
             temp['sortNo'] = menu['sortNo']
 
             # temp['menuType'] = menu['menuType']
 
             for menu1 in result:
-                if menu1['id'] == menu['parentId']:
+                if menu1['menu_id'] == menu['parent_id']:
                     # print("menu1['id']")
                     # print(menu1)
                     menu1['children'].append(temp)
@@ -194,7 +200,7 @@ async def queryTreeList():
             if menu['parent_id'] == None or menu['parent_id'] == 0:
                 temp = {}
                 temp['key'] = menu['menu_id']
-                temp['path'] = menu['path']
+                temp['path'] = menu['url']
                 temp['component'] = menu['component']
                 temp['slotTitle'] = menu['menu_name']
                 temp['icon'] = menu['icon']
@@ -205,7 +211,7 @@ async def queryTreeList():
             if menu['parent_id'] is not None and menu['parent_id'] != 0:
                 temp = {}
                 temp['key'] = menu['menu_id']
-                temp['path'] = menu['path']
+                temp['path'] = menu['url']
                 temp['component'] = menu['component']
                 temp['slotTitle'] = menu['menu_name']
                 temp['icon'] = menu['icon']

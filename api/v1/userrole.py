@@ -78,7 +78,7 @@ async def del_user(
             await Userrole.del_by_userroleid(id)
             await UserRoleRelp.delete_by_roleId(id)
             await RoleMenuRelp.delete_by_roleId(id)
-            await RolePermRelp.delete_by_roleId(id)
+            # await RolePermRelp.delete_by_roleId(id)
             return resp.ok(data=id)
     except Exception as e:
         return resp.fail(resp.DataDestroyFail, detail=str(e))
@@ -147,30 +147,26 @@ async def get_role_all_permissions(role_id: int):
                 detail="角色ID必须大于0"
             )
         
-        # 并行执行两个查询
-        menu_result, permission_result = await asyncio.gather(
-            RoleMenuRelp.selectMenu_by_role_id(role_id),
-            RolePermRelp.selectPermission_by_role_id(role_id),
-            return_exceptions=True  # 防止一个查询失败影响另一个
-        )
+        
+        menu_result = await RoleMenuRelp.selectMenu_by_role_id(role_id)       
+        print(menu_result)
         
         # 处理异常
-        if isinstance(menu_result, Exception):
+        if not menu_result:
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"查询菜单权限失败: {str(menu_result)}"
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"未找到角色 {role_id} 的权限信息"
             )
         
-        if isinstance(permission_result, Exception):
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"查询功能权限失败: {str(permission_result)}"
-            )
+        # if isinstance(permission_result, Exception):
+        #     raise HTTPException(
+        #         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        #         detail=f"查询功能权限失败: {str(permission_result)}"
+        #     )
         
         return {
             "role_id": role_id,
-            "menu_ids": menu_result.get('menu_ids', []),
-            "perm_ids": permission_result.get('perm_ids', []),
+            "menu_ids": menu_result.get('menu_ids', [])
         }
         
     except HTTPException:

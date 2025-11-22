@@ -164,15 +164,14 @@ async def verify_current_user_perm(
     :param token:
     :return:
     """
-    # print(token.get("sub"))
     user =await Userinfo.single_by_account(account=token.get("sub"))
     if not user:
         raise HTTPException(status_code=401, detail="未找到用户信息。")
-    result = await RoleMenuRelp.select_by_role_id(user['userRoleId'])
+    result = await RoleMenuRelp.selectMenu_by_role_id(user['role_id'])
     print('RoleMenuRelp result')
     print(result)
-    menuIds = result['menuIds']
-    result =await Userrole.query_role_perm(user['userRoleId'])
+    menuIds = result['menu_ids']
+    result =await Userrole.query_role_perm(user['role_id'])
     print('result')
     print(result)
     menuList = await Usermenu.select_by_ids(menuIds)

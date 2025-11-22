@@ -13,6 +13,8 @@ import os
 
 from datetime import timedelta
 from common.sys_redis import redis_client
+from typing import Optional
+
 
 from models.user import Userinfo
 from schemas.response import resp
@@ -20,9 +22,10 @@ from core import security
 from core.config import settings
 from common import custom_exc
 from passlib.context import CryptContext
-from fastapi import Depends,HTTPException,Request
+from fastapi import Depends,HTTPException
 from fastapi.security import OAuth2PasswordBearer
 import jwt
+from common import deps
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # 定义 OAuth2 方案
@@ -65,59 +68,22 @@ class UserInfoLogic(object):
         redis_client.set(token_key, user['account'], ex=60*60*24*8)
         
         return token
-
-
-async def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
-    try:
-        # 1. 首先从Redis验证token是否存在
-        redis_token_key = f"token:{token}"
-        redis_account = redis_client.get(redis_token_key)
-        
-        if not redis_account:
-            raise HTTPException(status_code=401, detail="Token已失效，请重新登录")
-        
-        # 2. 添加缺失的环境变量定义
-        SECRET_KEY = os.getenv('SECRET_KEY')
-        ALGORITHM = os.getenv('ALGORITHM')
-        
-        if not SECRET_KEY or not ALGORITHM:
-            raise HTTPException(status_code=500, detail="系统配置错误")
-        
-        # 3. 验证JWT token
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        account = payload.get("sub")
-        
-        if not account:
-            raise HTTPException(status_code=401, detail="Token格式错误")
-        
-        if account != redis_account:
-            raise HTTPException(status_code=401, detail="Token无效")
-        
-        # 4. 获取用户完整信息
-        user = await Userinfo.single_by_account(account)
-
-        
-        if not user:
-            raise HTTPException(status_code=401, detail="用户不存在")
-        
-        user_info = user.copy()
-        user_info['token'] = token
-        
-        return user_info
-    
-        
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token已过期")
-    except Exception as e:
-        raise HTTPException(status_code=401, detail="用户认证失败")
     
 
-async def get_current_user_for_logout(token: str = Depends(oauth2_scheme)) -> dict:
-    user_info = await get_current_user(token)
+async def get_current_user_for_logout(
+    token: Optional[str] = Depends(deps.check_jwt_token)
+) -> dict:
+    """
+    专门用于登出的用户获取函数
+    返回包含用户信息和token的字典
+    """
+    # 获取用户信息
+    user = await Userinfo.single_by_account(account=token.get("sub"))
+    if not user:
+        raise HTTPException(status_code=401, detail="未找到用户信息。")
     
-    # 只返回登出需要的字段
+    # 返回包含用户信息和原始token的字典
     return {
-        "user_id": user_info.get('user_id'),
-        "account": user_info.get('account'),
-        "token": user_info.get('token')
+        'user_info': user,
+        'token': token  # 这里假设token是原始token字符串，如果不是请调整
     }

@@ -53,3 +53,48 @@ class ProcessDesignUpdate(BaseModel):
     heat_treatment_time: Optional[Decimal] = Field(None, ge=0)
     heat_input: Optional[Decimal] = Field(None, ge=0)
 
+
+class ProcessDesignFilter(BaseModel):
+    """焊接工艺筛选条件"""
+    process_id: Optional[str] = Field(None, description="工艺ID")
+    related_material_id: Optional[str] = Field(None, description="关联材料ID")
+    related_equipment_id: Optional[str] = Field(None, description="关联设备ID")
+    
+    # 激光参数筛选
+    laser_power_min: Optional[int] = Field(None, description="最小激光功率(W)")
+    laser_power_max: Optional[int] = Field(None, description="最大激光功率(W)")
+    welding_speed_min: Optional[int] = Field(None, description="最小焊接速度(mm/min)")
+    welding_speed_max: Optional[int] = Field(None, description="最大焊接速度(mm/min)")
+    defocus_amount_min: Optional[Decimal] = Field(None, description="最小离焦量(mm)")
+    defocus_amount_max: Optional[Decimal] = Field(None, description="最大离焦量(mm)")
+    incident_angle_min: Optional[Decimal] = Field(None, description="最小入射角度(°)")
+    incident_angle_max: Optional[Decimal] = Field(None, description="最大入射角度(°)")
+    
+    # 坡口和接头筛选
+    groove_type: Optional[str] = Field(None, description="坡口形式")
+    groove_angle_min: Optional[int] = Field(None, description="最小坡口角度(°)")
+    groove_angle_max: Optional[int] = Field(None, description="最大坡口角度(°)")
+    joint_type: Optional[str] = Field(None, description="接头形式")
+    joint_thickness_min: Optional[Decimal] = Field(None, description="最小接头厚度(mm)")
+    joint_thickness_max: Optional[Decimal] = Field(None, description="最大接头厚度(mm)")
+    
+    # 扫描参数筛选
+    scanning_mode: Optional[str] = Field(None, description="扫描方式")
+    scanning_frequency_min: Optional[int] = Field(None, description="最小扫描频率(Hz)")
+    scanning_frequency_max: Optional[int] = Field(None, description="最大扫描频率(Hz)")
+    scanning_amplitude_min: Optional[Decimal] = Field(None, description="最小扫描幅值(mm)")
+    scanning_amplitude_max: Optional[Decimal] = Field(None, description="最大扫描幅值(mm)")
+    
+    # 热处理筛选
+    heat_treatment_method: Optional[str] = Field(None, description="热处理方法")
+    heat_treatment_temp_min: Optional[int] = Field(None, description="最小热处理温度(℃)")
+    heat_treatment_temp_max: Optional[int] = Field(None, description="最大热处理温度(℃)")
+    heat_treatment_time_min: Optional[Decimal] = Field(None, description="最小热处理时间(h)")
+    heat_treatment_time_max: Optional[Decimal] = Field(None, description="最大热处理时间(h)")
+    
+    # 热输入筛选
+    heat_input_min: Optional[Decimal] = Field(None, description="最小热输入量(J·mm⁻¹)")
+    heat_input_max: Optional[Decimal] = Field(None, description="最大热输入量(J·mm⁻¹)")
+
+    class Config:
+        from_attributes = True
