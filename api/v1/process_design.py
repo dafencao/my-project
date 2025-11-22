@@ -16,13 +16,30 @@ async def add_material_info(
     try:
         process = dict(req)
         result = await ProcessDesign.add_process(process)
+        return resp.ok(data=result, msg=f"工艺 '{req.process_id}' 添加成功")
+        
     except IntegrityError as e:
-        return resp.fail(resp.DataStoreFail.set_msg('工艺编码已存在！'))
+        error_detail = str(e)
+        
+        if "unique" in error_detail.lower() or "duplicate" in error_detail.lower():
+            error_msg = f"工艺编码 '{req.process_id}' 已存在"
+        elif "foreign" in error_detail.lower():
+            if "material" in error_detail.lower():
+                error_msg = f"关联材料ID '{req.related_material_id}' 不存在"
+            elif "equipment" in error_detail.lower():
+                error_msg = f"关联设备ID '{req.related_equipment_id}' 不存在"
+            else:
+                error_msg = "关联数据不存在"
+        else:
+            error_msg = "数据完整性错误"
+            
+        return resp.fail(resp.DataStoreFail.set_msg(error_msg))
+    
+    except ValueError as ve:
+        return resp.fail(resp.InvalidParams.set_msg(str(ve)))
     
     except Exception as e:
-        return resp.fail(resp.DataStoreFail, detail=str(e))
-    
-    return resp.ok(data=result)
+        return resp.fail(resp.DataStoreFail.set_msg("系统内部错误"))
 
 
 @router.delete("/process/delete", summary="删除焊接工艺", name="删除焊接工艺", dependencies=[Depends(get_db)])

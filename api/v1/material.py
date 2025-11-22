@@ -17,13 +17,23 @@ async def add_material_info(
     try:
         material = dict(req)
         result = await MaterialInfo.add_material(material)
+        return resp.ok(data=result, msg=f"材料 '{req.material_id}' 添加成功")
+        
     except IntegrityError as e:
-        return resp.fail(resp.DataStoreFail.set_msg('材料编码已存在！'))
-
+        error_detail = str(e)
+        
+        if "unique" in error_detail.lower() or "duplicate" in error_detail.lower():
+            error_msg = f"材料编码 '{req.material_id}' 已存在"
+        else:
+            error_msg = "数据完整性错误"
+            
+        return resp.fail(resp.DataStoreFail.set_msg(error_msg))
+    
+    except ValueError as ve:
+        return resp.fail(resp.InvalidParams.set_msg(str(ve)))
+    
     except Exception as e:
-        return resp.fail(resp.DataStoreFail, detail=str(e))
-
-    return resp.ok(data=result)
+        return resp.fail(resp.DataStoreFail.set_msg("系统内部错误"))
 
 
 @router.delete("/material/delete", summary="删除一个母材", name="删除一个母材", dependencies=[Depends(get_db)])

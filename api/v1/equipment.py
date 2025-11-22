@@ -18,13 +18,23 @@ async def add_material_info(
     try:
         equipment_dict = dict(req)
         result = await EquipmentParam.add_equipment(equipment_dict)
+        return resp.ok(data=result, msg=f"设备 '{req.equipment_id}' 添加成功")
+        
     except IntegrityError as e:
-        return resp.fail(resp.DataStoreFail.set_msg('设备编码编码已存在！'))
-
+        error_detail = str(e)
+        
+        if "unique" in error_detail.lower() or "duplicate" in error_detail.lower():
+            error_msg = f"设备编码 '{req.equipment_id}' 已存在"
+        else:
+            error_msg = "数据完整性错误"
+            
+        return resp.fail(resp.DataStoreFail.set_msg(error_msg))
+    
+    except ValueError as ve:
+        return resp.fail(resp.InvalidParams.set_msg(str(ve)))
+    
     except Exception as e:
-        return resp.fail(resp.DataStoreFail, detail=str(e))
-
-    return resp.ok(data=result)
+        return resp.fail(resp.DataStoreFail.set_msg("系统内部错误"))
 
 
 @router.delete("/equipment/delete", summary="删除激光焊接设备", name="删除激光焊接设备", dependencies=[Depends(get_db)])
@@ -59,7 +69,7 @@ async def edit_equipment(
 
 
 @router.get("/equipment/showall",summary='查询所有激光焊接设备',name='查询所有激光焊接设备')
-async def get_all_materials() -> Any:
+async def get_all_equipments() -> Any:
     """获取所有设备"""
     try:
         result = await EquipmentParam.select_all()
