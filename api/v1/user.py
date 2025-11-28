@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Form, Header,Request
 
 from core import security
 
-from models.user import Department, Level, UserLineRelp, UserPostRelp, UserRoleRelp, Userinfo, Userline, Userpost
+from models.user import Department, Level,UserRoleRelp, Userinfo, Userline, Userpost
 
 from common import deps, logger
 from models.usermenu import Usermenu
@@ -178,12 +178,26 @@ async def add_userinfo_info(
             #             'userId': result, 'postId': postId})
 
     except IntegrityError as e:
-        return resp.fail(resp.DataStoreFail.set_msg('用户账号已存在！'))
+        # 更精确的错误信息处理
+        error_msg = str(e).lower()
+        
+        if 'unique' in error_msg and 'username' in error_msg:
+            return resp.fail(resp.DataStoreFail.set_msg('用户账号已存在！'))
+        elif 'unique' in error_msg and 'email' in error_msg:
+            return resp.fail(resp.DataStoreFail.set_msg('邮箱已存在！'))
+        elif 'unique' in error_msg and 'phone' in error_msg:
+            return resp.fail(resp.DataStoreFail.set_msg('手机号已存在！'))
+        elif 'foreign key' in error_msg:
+            return resp.fail(resp.DataStoreFail.set_msg('关联的角色不存在！'))
+        else:
+            # 记录详细错误信息用于调试
+            logger.error(f"数据库完整性错误: {e}")
+            return resp.fail(resp.DataStoreFail.set_msg('数据完整性验证失败！'))
 
     except Exception as e:
-        # print(e)
-        # print(type(e))
+        logger.error(f"添加用户异常: {e}")
         return resp.fail(resp.DataStoreFail, detail=str(e))
+    
     return resp.ok(data=result)
 
 
@@ -534,6 +548,14 @@ async def get_department() -> Any:
     result = await Department.select_all()
 
     return resp.ok(data=result)
+
+
+@router.get("/allUser", summary="获取所有用户信息", name="获取所有用户信息")
+async def get_current_userinfo() -> Any:
+    # 移除敏感信息
+    result = await Userinfo.select_allUser()
+    return resp.ok(data=result)
+
 
 @router.post("/clear-redis")
 async def clear_redis():

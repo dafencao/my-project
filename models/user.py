@@ -7,12 +7,9 @@ from peewee import CharField, IntegerField, DateTimeField,BigIntegerField,BigAut
 from playhouse.shortcuts import model_to_dict, dict_to_model
 from sqlalchemy.orm import relationship
 from models.userrole import Userrole
-from schemas.request import sys_user_schema
-from core import security
-from peewee import fn, JOIN
-from datetime import datetime 
-from typing import Optional
+from peewee import JOIN
 from fastapi import Request
+from common import logger
 
 
 from utils.tools_func import convert_arr, convert_num_arr
@@ -659,5 +656,29 @@ class Userinfo(BaseModel):
             else:
                 client_ip = request.client.host if request.client else "unknown"
         return client_ip
+
+
+    @classmethod
+    async def select_allUser(cls):
+        """
+        获取所有用户信息，移除敏感信息
+        """
+        try:
+            # 查询所有用户（包含所有字段）
+            users = await async_db.execute(Userinfo.select())
+            
+            # 处理结果，移除密码字段
+            result = []
+            for user in users:
+                user_dict = model_to_dict(user)  # 将模型实例转换为字典
+                user_dict.pop('password', None)  # 移除password字段
+                result.append(user_dict)
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"获取所有用户信息失败: {e}")
+            raise e
+
 
 

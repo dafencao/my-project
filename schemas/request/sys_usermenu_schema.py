@@ -6,7 +6,7 @@ Date: 2023-04-04 15:07:18
 LastEditors: Please set LastEditors
 LastEditTime: 2023-05-23 15:18:50
 '''
-from pydantic import BaseModel, EmailStr, AnyHttpUrl, Field
+from pydantic import BaseModel, EmailStr, AnyHttpUrl, Field, validator
 from typing import Optional
 from datetime import datetime
 import pytz
@@ -48,6 +48,8 @@ class MenuBase(BaseModel):
     keepAlive: Optional[bool] = False
     leaf: bool = True
     redirect: Optional[str] = ""
+    update_at: datetime = None
+    create_at:datetime = None
 
 
 class usermenuQuery(MenuBase):
@@ -71,10 +73,15 @@ class MenuUpdate(BaseModel):
     url: Optional[str]
     component: Optional[str]
 
-    sortNo: Optional[int]
     icon: Optional[str] = None
+    update_at: datetime = None
 
-    update_at: Optional[datetime] =None
+    # 添加验证器确保必要字段存在
+    @validator('menu_id')
+    def validate_menu_id(cls, v):
+        if not v:
+            raise ValueError('菜单ID不能为空')
+        return v
 
     # description: Optional[str] = ''
 

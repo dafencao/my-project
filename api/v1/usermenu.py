@@ -16,6 +16,8 @@ from schemas.response import resp
 from schemas.request import sys_usermenu_schema
 from playhouse.shortcuts import dict_to_model
 from peewee import fn
+from common.session import async_db
+
 
 router = APIRouter()
 
@@ -76,20 +78,44 @@ async def del_usermenu(
 async def edit_menu(
     menu: sys_usermenu_schema.MenuUpdate
 ) -> Any:
-    menu.update_at = datetime.strftime(
-        datetime.now(pytz.timezone('Asia/Shanghai')), '%Y-%m-%d %H:%M:%S')
-    print(menu)
-    if menu.menu_type == 1:
-        menu.parent_id = 0
-    menu = dict_to_model(Usermenu,  dict(menu))
-
     try:
-        result =await Usermenu.update_menu(menu)
-        # result = menu.save()
+        # 1. 验证菜单是否存在
+        existing_menu = await Usermenu.select_by_ids(menu.menu_id)
+        if not existing_menu:
+            return resp.fail(resp.DataNotFound, detail="菜单不存在")
+        
+        # 2. 只获取有值的字段（排除未设置的字段）
+        menu_data = menu.dict(exclude_unset=True, exclude_none=True)
+        
+        # 3. 检查是否有要更新的字段（排除menu_id）
+        update_fields = {k: v for k, v in menu_data.items() if k != 'menu_id'}
+        if not update_fields:
+            return resp.fail(resp.DataValidateFail, detail="没有提供要更新的字段")
+        
+        # 4. 移除不应该更新的字段
+        update_fields.pop('create_at', None)
+        
+        # 5. 设置更新时间
+        update_fields['update_at'] = datetime.now(pytz.timezone('Asia/Shanghai')).strftime('%Y-%m-%d %H:%M:%S')
+        
+        # 6. 业务逻辑处理
+        if update_fields.get('menu_type') == 1:
+            update_fields['parent_id'] = 0
+        
+        # 7. 直接使用字典更新，避免模型转换问题
+        result = await Usermenu.update_by_id_simple(menu.menu_id, update_fields)
+        
+        if result:
+            return resp.ok(data="更新成功")
+        else:
+            return resp.fail(resp.DataUpdateFail, detail="更新失败")
+        
+    except ValueError as e:
+        logger.warning(f"数据验证失败: {e}")
+        return resp.fail(resp.DataValidateFail, detail=str(e))
     except Exception as e:
-        print(e)
+        logger.error(f"更新菜单失败: {e}")
         return resp.fail(resp.DataUpdateFail, detail=str(e))
-    return resp.ok(data=result)
 
 
 @router.post("/sys/menu/list", summary="查询所有菜单", name="查询所有菜单",dependencies=[Depends(verify_current_user_perm)])
@@ -184,39 +210,97 @@ async def query_user_roleId(role_id: str):
 
 
 #
+# @router.get("/sys/role/queryTreeList", summary="查询所有的菜单", name="查询所有的菜单", dependencies=[Depends(get_db)])
+# async def queryTreeList():
+#     try:
+#         result = {}
+#         db = await Usermenu.select_all()
+#         if db:
+#             menuList = list(db)
+#         else:
+#             menuList = []
+#         menuList = sorted(menuList, key=lambda e: (e.__getitem__(
+#             'menu_type'),  e.__getitem__('menu_id')), reverse=False)
+#         result['treeList'] = []
+#         for menu in menuList:
+#             if menu['parent_id'] == None or menu['parent_id'] == 0:
+#                 temp = {}
+#                 temp['key'] = menu['menu_id']
+#                 temp['path'] = menu['url']
+#                 temp['component'] = menu['component']
+#                 temp['slotTitle'] = menu['menu_name']
+#                 temp['icon'] = menu['icon']
+
+#                 temp['children'] = []
+#                 result['treeList'].append(temp)
+#         for menu in menuList:
+#             if menu['parent_id'] is not None and menu['parent_id'] != 0:
+#                 temp = {}
+#                 temp['key'] = menu['menu_id']
+#                 temp['path'] = menu['url']
+#                 temp['component'] = menu['component']
+#                 temp['slotTitle'] = menu['menu_name']
+#                 temp['icon'] = menu['icon']
+
+#                 # 查找父菜单
+#                 parent_found = False
+#                 for parent_menu in result['treeList']:
+#                     if parent_menu['key'] == menu['parent_id']:
+#                         parent_menu['children'].append(temp)
+#                         parent_found = True
+#                         break
+                
+#                 # 如果没找到父菜单，打印调试信息
+#                 if not parent_found:
+#                     print(f"⚠️ 菜单 {menu['menu_id']} 的父菜单 {menu['parent_id']} 不存在于顶级菜单中")
+        
+#         print("完整菜单树:", result['treeList'])
+#         return resp.ok(data=result)  # 修正缩进
+
+#         # print("result['treeList']")
+#         # print(result['treeList'])
+#     except Exception as e:
+#         print(f"查询菜单树失败: {e}")
+#         return resp.fail(resp.DataNotFound, detail=str(e))
+
+
 @router.get("/sys/role/queryTreeList", summary="查询所有的菜单", name="查询所有的菜单", dependencies=[Depends(get_db)])
 async def queryTreeList():
     try:
         result = {}
-        db = await Usermenu.select_all()
-        if db:
-            menuList = list(db)
-        else:
-            menuList = []
-        menuList = sorted(menuList, key=lambda e: (e.__getitem__(
-            'menu_type'),  e.__getitem__('menu_id')), reverse=False)
+        
+        # 一次性获取所有菜单，不分页
+        db = await async_db.execute(Usermenu.select().dicts())
+        menuList = list(db) if db else []
+            
+        menuList = sorted(menuList, key=lambda e: (e['menu_type'], e['menu_id']), reverse=False)
+        
+        # 构建树形结构（保持您原有的逻辑）
         result['treeList'] = []
         for menu in menuList:
             if menu['parent_id'] == None or menu['parent_id'] == 0:
-                temp = {}
-                temp['key'] = menu['menu_id']
-                temp['path'] = menu['url']
-                temp['component'] = menu['component']
-                temp['slotTitle'] = menu['menu_name']
-                temp['icon'] = menu['icon']
-
-                temp['children'] = []
+                temp = {
+                    'key': menu['menu_id'],
+                    'menu_type':menu['menu_type'],
+                    'path': menu['url'],
+                    'component': menu['component'],
+                    'slotTitle': menu['menu_name'],
+                    'icon': menu['icon'],
+                    'children': []
+                }
                 result['treeList'].append(temp)
+                
         for menu in menuList:
             if menu['parent_id'] is not None and menu['parent_id'] != 0:
-                temp = {}
-                temp['key'] = menu['menu_id']
-                temp['path'] = menu['url']
-                temp['component'] = menu['component']
-                temp['slotTitle'] = menu['menu_name']
-                temp['icon'] = menu['icon']
-
-                # 查找父菜单
+                temp = {
+                    'key': menu['menu_id'],
+                    'menu_type':menu['menu_type'],
+                    'path': menu['url'],
+                    'component': menu['component'],
+                    'slotTitle': menu['menu_name'],
+                    'icon': menu['icon']
+                }
+                
                 parent_found = False
                 for parent_menu in result['treeList']:
                     if parent_menu['key'] == menu['parent_id']:
@@ -224,15 +308,17 @@ async def queryTreeList():
                         parent_found = True
                         break
                 
-                # 如果没找到父菜单，打印调试信息
                 if not parent_found:
                     print(f"⚠️ 菜单 {menu['menu_id']} 的父菜单 {menu['parent_id']} 不存在于顶级菜单中")
         
-        print("完整菜单树:", result['treeList'])
-        return resp.ok(data=result)  # 修正缩进
+        # 返回总数量信息（便于前端了解数据规模）
+        result['pagination'] = {
+            'total': len(menuList),
+            'totalPages': 1
+        }
+        
+        return resp.ok(data=result)
 
-        # print("result['treeList']")
-        # print(result['treeList'])
     except Exception as e:
         print(f"查询菜单树失败: {e}")
         return resp.fail(resp.DataNotFound, detail=str(e))

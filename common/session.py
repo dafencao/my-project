@@ -145,8 +145,8 @@ class BaseModel(Model):
         self.object = Manager(db)
 
     # deleted_at = DateTimeField()
-    createAt = DateTimeField(column_name='create_at')
-    updateAt = DateTimeField(column_name='update_at')
+    # createAt = DateTimeField(column_name='create_at')
+    # updateAt = DateTimeField(column_name='update_at')
 
     # @classmethod
     # def undelete(cls):

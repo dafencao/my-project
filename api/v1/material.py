@@ -101,7 +101,7 @@ async def search_materials(
 
 @router.get("/material/showall",summary='查询所有母材',name='查询所有母材')
 async def get_all_materials() -> Any:
-    """获取所有部门"""
+    """获取所有母材"""
     try:
         result = await MaterialInfo.select_all()
         return resp.ok(data=result)

@@ -3,7 +3,7 @@
 """
 
 from common.session import BaseModel, async_db
-from peewee import CharField, IntegerField,BooleanField
+from peewee import CharField, IntegerField,BooleanField, DateTimeField
 # from playhouse.shortcuts import model_to_dict, dict_to_model
 # from sqlalchemy.orm import relationship
 # from schemas.request import sys_usermenu_schema
@@ -36,6 +36,8 @@ class Usermenu(BaseModel):
     redirect = CharField()  # 菜单跳转地址
     createBy = CharField(column_name='create_by')
     updateBy = CharField(column_name='update_by')
+    create_at = DateTimeField()
+    update_at = DateTimeField()
 
     class Meta:
         table_name = 'menu'  # 自定义映射的表名
@@ -75,11 +77,28 @@ class Usermenu(BaseModel):
     async def add_usermenu(cls, menu):  # 添加角色
         result =await async_db.create( Usermenu,**menu )
         return result.menu_id
+    
+
     @classmethod
-    # menu:Model Usermenu
-    async def update_menu(cls, menu):
-        result =await async_db.update( menu )
-        return result
+    async def update_by_id_simple(cls, menu_id: int, update_data: dict) -> bool:
+        """
+        简化版更新方法
+        """
+        try:
+            # 直接使用Peewee的更新方式
+            query = cls.update(
+                **update_data
+            ).where(
+                cls.menu_id == menu_id
+            )
+            
+            print(f"SQL查询: {query}")
+            affected_rows = await async_db.execute(query)
+            return affected_rows > 0
+            
+        except Exception as e:
+            print(f"简单更新失败: {e}")
+            raise e
 
     # @router.put("/sys/permission/edit", summary="编辑菜单", name="编辑菜单")
     # async def edit_menu(
@@ -192,3 +211,6 @@ class Usermenu(BaseModel):
         ).where(Usermenu.menu_id.in_(ids)).dicts())
         result = list(result)
         return result   
+    
+
+ 
