@@ -80,25 +80,13 @@ class Usermenu(BaseModel):
     
 
     @classmethod
-    async def update_by_id_simple(cls, menu_id: int, update_data: dict) -> bool:
-        """
-        简化版更新方法
-        """
-        try:
-            # 直接使用Peewee的更新方式
-            query = cls.update(
-                **update_data
-            ).where(
-                cls.menu_id == menu_id
-            )
-            
-            print(f"SQL查询: {query}")
-            affected_rows = await async_db.execute(query)
-            return affected_rows > 0
-            
-        except Exception as e:
-            print(f"简单更新失败: {e}")
-            raise e
+    async def update_menu(cls, menu):
+        # 字典结构更新数据
+        print(menu)
+        menu_dict = menu.__data__
+        menu_id = menu.menu_id
+        u = await async_db.execute(Usermenu.update(**menu_dict).where(Usermenu.menu_id == menu_id))
+        return u
 
     # @router.put("/sys/permission/edit", summary="编辑菜单", name="编辑菜单")
     # async def edit_menu(

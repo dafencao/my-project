@@ -3,7 +3,7 @@
 """
 
 from common.session import BaseModel, paginator, db, async_db
-from peewee import CharField, BigAutoField,BigIntegerField
+from peewee import CharField, BigAutoField,BigIntegerField, DateTimeField
 from playhouse.shortcuts import model_to_dict, dict_to_model
 from sqlalchemy.orm import relationship
 from peewee import fn, SQL
@@ -33,8 +33,8 @@ class Department(BaseModel):
     status = CharField(max_length=1, null=False, default='0', verbose_name="部门状态")
     # 删除标志：char(1)，'0' 表示未删除，'1' 表示已删除（非空）
     del_flag = CharField(max_length=1, null=False, default='0', verbose_name="删除标志")
-    # create_at = DateTimeField(default=datetime.now(pytz.timezone('Asia/Shanghai')), verbose_name="创建时间")
-    # update_at = DateTimeField(default=datetime.now(pytz.timezone('Asia/Shanghai')), verbose_name="创建时间")
+    create_at = DateTimeField()
+    update_at = DateTimeField()
 
 
     class Meta:

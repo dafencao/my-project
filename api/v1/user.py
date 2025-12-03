@@ -292,9 +292,10 @@ async def add_userinfo_info(
 
 @router.delete("/delete", summary="删除一条用户信息", name="删除用户")
 async def del_user(
-        user_id: int
+        user_id: dict
 ) -> Any:
     try:
+        user_id = user_id['user_id']
         async with db.atomic_async():
             result = await Userinfo.del_by_userid(user_id)
             await UserRoleRelp.delete_by_userId(user_id)

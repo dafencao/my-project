@@ -13,7 +13,7 @@ from models.usermenu import Usermenu
 from schemas.request import sys_user_schema
 
 from peewee import fn, JOIN
-import time
+import datetime
 
 from utils.tools_func import convert_arr, convert_num_arr
 
@@ -127,8 +127,8 @@ class Userrole(BaseModel):
     status = CharField(max_length=1, null=False, default='0', verbose_name="角色状态")
     # 删除标志：char(1)，'0' 未删除、'1' 已删除，非空
     del_flag = CharField(max_length=1, null=False, default='0', verbose_name="删除标志")
-    update_at = DateTimeField
-    create_at = DateTimeField
+    update_at = DateTimeField()
+    create_at = DateTimeField()
 
 
     # id = IntegerField(primary_key=True)  # id
@@ -244,9 +244,27 @@ class Userrole(BaseModel):
 
     @classmethod
     async def select_all(cls):  # 查看所有的角色
-        db =await async_db.execute( Userrole.select(Userrole.role_id, Userrole.role_name,
-                             Userrole.status).dicts())
-        return list(db)
+        try:
+            # 执行查询，获取结果集
+            db = await async_db.execute(Userrole.select())
+            
+            data = []
+            for row in db:
+                # 使用 model_to_dict 正确序列化
+                item = model_to_dict(row)
+                print(item)
+                # 转换日期时间为字符串
+                if item.get('create_at'):
+                    item['create_at'] = item['create_at'].isoformat()
+                if item.get('update_at'):
+                    item['update_at'] = item['update_at'].isoformat()
+                
+                data.append(item)
+            
+            return data  # 直接返回data列表，不是list(db)
+        except Exception as e:
+            print(f"查询失败: {e}")
+            return []
 
     @classmethod
     async def add_role(cls, userrole):  # 添加角色

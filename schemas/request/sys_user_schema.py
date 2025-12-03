@@ -135,7 +135,6 @@ class UsersCreate(BaseModel):
 
 class UserUpdate(UserBase):
     
-
     # lastUserInfo: Optional[str]
 
     pass

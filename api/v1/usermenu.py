@@ -39,8 +39,9 @@ async def add_usermenu_info(
 
 @router.delete("/sys/menu/delete", summary="删除菜单", name="删除菜单")
 async def del_usermenu(
-    id: int
-) -> Any:
+    id: dict
+):
+    id=id['id']
     try:
         result =await Usermenu.del_by_usermenu_id(id)
     except Exception as e:
@@ -78,44 +79,20 @@ async def del_usermenu(
 async def edit_menu(
     menu: sys_usermenu_schema.MenuUpdate
 ) -> Any:
+    menu.update_at = datetime.strftime(
+        datetime.now(pytz.timezone('Asia/Shanghai')), '%Y-%m-%d %H:%M:%S')
+    print(menu)
+    if menu.menu_type == 1:
+        menu.parent_id = 0
+    menu = dict_to_model(Usermenu,  dict(menu))
+
     try:
-        # 1. 验证菜单是否存在
-        existing_menu = await Usermenu.select_by_ids(menu.menu_id)
-        if not existing_menu:
-            return resp.fail(resp.DataNotFound, detail="菜单不存在")
-        
-        # 2. 只获取有值的字段（排除未设置的字段）
-        menu_data = menu.dict(exclude_unset=True, exclude_none=True)
-        
-        # 3. 检查是否有要更新的字段（排除menu_id）
-        update_fields = {k: v for k, v in menu_data.items() if k != 'menu_id'}
-        if not update_fields:
-            return resp.fail(resp.DataValidateFail, detail="没有提供要更新的字段")
-        
-        # 4. 移除不应该更新的字段
-        update_fields.pop('create_at', None)
-        
-        # 5. 设置更新时间
-        update_fields['update_at'] = datetime.now(pytz.timezone('Asia/Shanghai')).strftime('%Y-%m-%d %H:%M:%S')
-        
-        # 6. 业务逻辑处理
-        if update_fields.get('menu_type') == 1:
-            update_fields['parent_id'] = 0
-        
-        # 7. 直接使用字典更新，避免模型转换问题
-        result = await Usermenu.update_by_id_simple(menu.menu_id, update_fields)
-        
-        if result:
-            return resp.ok(data="更新成功")
-        else:
-            return resp.fail(resp.DataUpdateFail, detail="更新失败")
-        
-    except ValueError as e:
-        logger.warning(f"数据验证失败: {e}")
-        return resp.fail(resp.DataValidateFail, detail=str(e))
+        result =await Usermenu.update_menu(menu)
+        # result = menu.save()
     except Exception as e:
-        logger.error(f"更新菜单失败: {e}")
+        print(e)
         return resp.fail(resp.DataUpdateFail, detail=str(e))
+    return resp.ok(data=result)
 
 
 @router.post("/sys/menu/list", summary="查询所有菜单", name="查询所有菜单",dependencies=[Depends(verify_current_user_perm)])
@@ -286,6 +263,7 @@ async def queryTreeList():
                     'component': menu['component'],
                     'slotTitle': menu['menu_name'],
                     'icon': menu['icon'],
+                    'status':menu['status'],
                     'children': []
                 }
                 result['treeList'].append(temp)
@@ -298,7 +276,8 @@ async def queryTreeList():
                     'path': menu['url'],
                     'component': menu['component'],
                     'slotTitle': menu['menu_name'],
-                    'icon': menu['icon']
+                    'icon': menu['icon'],
+                    'status':menu['status']
                 }
                 
                 parent_found = False

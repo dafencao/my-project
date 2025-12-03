@@ -32,6 +32,7 @@ from models.user import UserRoleRelp, Userinfo
 from playhouse.shortcuts import model_to_dict, dict_to_model
 from peewee import fn, IntegrityError
 import asyncio
+import traceback
 
 router = APIRouter()
 
@@ -68,11 +69,11 @@ async def role_add(req: sys_userrole_schema.RoleCreate):
 
 
 
-@router.post("/sys/role/delete/{role_id}", summary="删除角色", name="删除角色")
+@router.post("/sys/role/delete", summary="删除角色", name="删除角色")
 async def del_user(
-        id: int
+        id: dict
 ) -> Any:
-    print(id)
+    id=id['id']
     try:
         async with db.atomic_async():
             await Userrole.del_by_userroleid(id)
@@ -82,8 +83,6 @@ async def del_user(
             return resp.ok(data=id)
     except Exception as e:
         return resp.fail(resp.DataDestroyFail, detail=str(e))
-
-
 
 
 

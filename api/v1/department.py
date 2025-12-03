@@ -38,9 +38,10 @@ async def add_department(
 
 @router.delete("/sys/department/delete", summary="删除部门", name="删除部门", dependencies=[Depends(get_db)])
 async def del_department(
-    dept_id : int
+    dept_id : dict
 ) -> Any:
     try:
+        dept_id = dept_id['dept_id']
         result = await Department.del_by_department_id(dept_id)
     except Exception as e:
         print(e)
