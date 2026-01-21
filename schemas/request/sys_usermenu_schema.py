@@ -48,7 +48,7 @@ class StatusEnum(str, Enum):
 
 class MenuBase(BaseModel):
     # id:Optional[int] = "" #add时id一般为自增唯一字段不需要前端传
-    parent_id: Optional[int] = Field(default=None,ge=0,alias="parentTitle",description="父级菜单ID,NULL表示顶级菜单",example=0)
+    parent_id: Optional[int] = Field(default=None,ge=0,alias="parentId",description="父级菜单ID,NULL表示顶级菜单",example=0)
     menu_name: Optional[str] = Field(default=None,max_length=255,alias="slotTitle",description="菜单名称",example="系统管理")
     menu_type: Optional[int] = Field(default=MenuTypeEnum.LEVEL_ONE,alias="level",description="菜单类型:1-一级菜单,2-子菜单",example=MenuTypeEnum.LEVEL_ONE)
     icon: Optional[str] = Field(default=None,max_length=255,description="菜单图标",example="el-icon-setting")

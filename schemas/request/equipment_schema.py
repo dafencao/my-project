@@ -6,16 +6,16 @@ from decimal import Decimal
 
 class EquipmentParamBase(BaseModel):
     """设备参数基础模型"""
-    equipment_id: str = Field(..., min_length=1, max_length=20, description="设备唯一标识（格式：EQU-序号）")
+    equipment_id: str = Field(..., min_length=1, max_length=20, description="设备唯一标识(格式:EQU-序号)")
     laser_equipment_model: str = Field(..., min_length=1, max_length=100, description="激光设备型号")
-    laser_power_range: str = Field(..., min_length=1, max_length=20, description="激光功率范围（格式：最小值-最大值，单位W）")
+    laser_power_range: str = Field(..., min_length=1, max_length=20, description="激光功率范围(格式:最小值-最大值，单位W)")
     output_mode: str = Field(..., description="激光输出方式")
-    laser_wavelength: Optional[int] = Field(default=0, ge=0, description="激光波长（nm）")
-    spot_diameter: Optional[Union[Decimal, float]] = Field(default=0.00, ge=0, description="光斑直径（mm，聚焦后尺寸）")
-    auxiliary_equipment_type: Optional[str] = Field(default="", max_length=50, description="辅助设备类型（如焊接工装、夹具）")
+    laser_wavelength: Optional[int] = Field(default=0, ge=0, description="激光波长(nm)")
+    spot_diameter: Optional[Union[Decimal, float]] = Field(default=0.00, ge=0, description="光斑直径(mm，聚焦后尺寸)")
+    auxiliary_equipment_type: Optional[str] = Field(default="", max_length=50, description="辅助设备类型(如焊接工装、夹具)")
     auxiliary_equipment_model: Optional[str] = Field(default="", max_length=50, description="辅助设备型号")
-    sensor_type: Optional[str] = Field(default="", max_length=50, description="传感器类型（如温度传感器、应力传感器）")
-    sensor_precision: Optional[str] = Field(default="", max_length=30, description="传感器精度（如±0.1℃）")
+    sensor_type: Optional[str] = Field(default="", max_length=50, description="传感器类型(如温度传感器、应力传感器)")
+    sensor_precision: Optional[str] = Field(default="", max_length=30, description="传感器精度(如±0.1℃)")
 
 class EquipmentParamUpdate(BaseModel):
     """更新设备参数请求模型"""
