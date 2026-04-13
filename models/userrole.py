@@ -32,7 +32,7 @@ class RoleMenuRelp(BaseModel):
         orm_mode = True
 
     @classmethod
-    async def selectMenu_by_role_id(cls, role_id: int):  # 通过id查询用户信息
+    async def selectMenu_by_role_id(cls, role_id: int):  # 通过id查询菜单权限
         db =  await async_db.execute(RoleMenuRelp.select(
             RoleMenuRelp.role_id,
             fn.group_concat(RoleMenuRelp.menu_id).python_value(convert_num_arr).alias('menu_ids')).where(RoleMenuRelp.role_id == role_id).group_by(RoleMenuRelp.role_id).dicts())
@@ -48,9 +48,10 @@ class RoleMenuRelp(BaseModel):
     async def add(cls, relp:dict):
         result = await async_db.create(RoleMenuRelp,**relp)
         return result.id
+    
     @classmethod
-    async def delete_by_roleId(cls, id):
-        return await async_db.execute(RoleMenuRelp.delete().where(RoleMenuRelp.role_id == id))
+    async def delete_by_roleId(cls, role_id):
+        return await async_db.execute(RoleMenuRelp.delete().where(RoleMenuRelp.role_id == role_id))
 
     @classmethod
     async def delete_by_roleId_and_menuId(cls, role_id,menu_id):

@@ -60,6 +60,7 @@ distutils.errors.DistutilsPlatformError: Microsoft Visual C++ 14.0 or greater is
 ```
 cd psad-backend
 python ./main.py
+python ./main.py
 ```
 
 ## api 文档

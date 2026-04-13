@@ -200,5 +200,12 @@ class Usermenu(BaseModel):
         result = list(result)
         return result   
     
+    @staticmethod
+    async def select_all_menu_id():
+        result = await async_db.execute(
+        Usermenu.select(Usermenu.menu_id).dicts()
+    )
+        menu_ids = [item['menu_id'] for item in result]
+        return menu_ids
 
  

@@ -89,6 +89,18 @@ class RoleUpdate(BaseModel):
 
 
 class RoleMenuPerm(BaseModel):
-    lastmenu_id: List[int]
     menu_id: List[int]
+    role_id: Optional[int]
+
+
+class RoleMenuDelete(BaseModel):
+    role_id: Optional[int]
+    menu_id: List[int]
+
+class RoleMenuUpdate(BaseModel):
+    role_id: Optional[int]
+    new_menu_id: Optional[int]
+
+class RoleMenuQuery(BaseModel):
+    menu_id: Optional[int]
     role_id: Optional[int]

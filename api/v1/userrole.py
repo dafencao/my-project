@@ -31,6 +31,7 @@ from schemas.request import sys_userrole_schema
 from models.user import UserRoleRelp, Userinfo
 from playhouse.shortcuts import model_to_dict, dict_to_model
 from peewee import fn, IntegrityError
+from models.usermenu import Usermenu
 import asyncio
 import traceback
 
@@ -39,7 +40,7 @@ router = APIRouter()
 
 @router.post("/sys/role/add", summary="添加角色", name="新增一条用户记录")
 async def role_add(req: sys_userrole_schema.RoleCreate):
-    permission_ids: List[int] = []
+    permission_ids: List[int] = [] 
     permission_ids = getattr(req, 'permissionIds') 
     role = req.dict(exclude={'permissionIds'})
     role['create_at'] = datetime.strftime(
@@ -196,31 +197,202 @@ async def role_update(req: sys_userrole_schema.RoleUpdate):
         print(e)
         return resp.fail(resp.DataUpdateFail, detail=str(e))
 
-
-@router.post("/sys/permission/saveRoleMenu", summary="新增角色的菜单权限。", name="新增角色的菜单权限。")
-async def saveRolePermission(req: sys_userrole_schema.RoleMenuPerm):
+@router.post("/sys/permission/saveRoleMenu", summary="新增角色的菜单权限", name="新增角色的菜单权限")
+async def add_Role_Menu(req: sys_userrole_schema.RoleMenuPerm):
     try:
+        # 1. 获取系统中所有有效的菜单ID
+        all_menu_ids_result = await Usermenu.select_all_menu_id()
+        
+        # 转换格式
+        if all_menu_ids_result and isinstance(all_menu_ids_result[0], dict):
+            valid_menu_ids = [item['menu_id'] for item in all_menu_ids_result]
+        elif all_menu_ids_result and isinstance(all_menu_ids_result[0], tuple):
+            valid_menu_ids = [item[0] for item in all_menu_ids_result]
+        else:
+            valid_menu_ids = all_menu_ids_result or []
+        
+        # 2. 查询角色已有的菜单权限
+        role_permissions = await RoleMenuRelp.selectMenu_by_role_id(req.role_id)  
+        current_menu_ids = role_permissions.get('menu_ids', [])
+        
         async with db.atomic_async():
-            # 添加新的菜单权限
+            added_count = 0
+            duplicate_count = 0
+            invalid_count = 0
+            
             for menu_id in req.menu_id:
-                if menu_id not in req.lastmenu_id:
-                    await RoleMenuRelp.add({
-                        'role_id': req.role_id,  # 统一使用下划线
-                        'menu_id': menu_id
-                    })
+                # 检查菜单ID是否有效
+                if menu_id not in valid_menu_ids:
+                    invalid_count += 1
+                    continue
+                
+                # 检查是否已存在
+                if menu_id in current_menu_ids:
+                    duplicate_count += 1
+                    continue
+                
+                # 添加新的菜单权限
+                await RoleMenuRelp.add({
+                    'role_id': req.role_id,
+                    'menu_id': menu_id
+                })
+                added_count += 1
             
-            # 删除不再需要的菜单权限
-            for menu_id in req.lastmenu_id:
-                if menu_id not in req.menu_id:
-                    result = await RoleMenuRelp.delete_by_roleId_and_menuId(
-                        req.role_id, menu_id
+            # 返回结果
+            if added_count == 0:
+                if duplicate_count > 0:
+                    return resp.fail(
+                        resp.DataStoreFail,
+                        detail=f"所有菜单权限都已存在"
                     )
-                    print(f"删除结果: {result}")
+                if invalid_count > 0:
+                    return resp.fail(
+                        resp.DataNotFound,
+                        detail=f"所有菜单ID无效"
+                    )
+                return resp.fail(resp.DataUpdateFail, detail="未添加任何权限")
             
-            return resp.ok()
+            message = f"成功新增 {added_count} 个菜单权限"
+            if duplicate_count > 0:
+                message += f"，跳过 {duplicate_count} 个已存在的权限"
+            if invalid_count > 0:
+                message += f"，忽略 {invalid_count} 个无效菜单ID"
+            
+            return resp.ok(data={"message": message})
+            
     except Exception as e:
         return resp.fail(resp.DataUpdateFail, detail=str(e))
+
+@router.delete("/sys/permission/delete", summary="删除角色的菜单权限", name="删除角色的菜单权限")
+async def del_rolemenu(
+    req: sys_userrole_schema.RoleMenuDelete
+):
+    try:
+        deleted_count = 0
+        failed_menu_ids = []
+        async with db.atomic_async():
+            for menu_id in req.menu_id:
+                try:
+                    result = await RoleMenuRelp.delete_by_roleId_and_menuId(
+                        req.role_id, 
+                        menu_id
+                    )
+                    if result:
+                        deleted_count += 1
+                except Exception as menu_error:
+                    failed_menu_ids.append({
+                        "menu_id": menu_id,
+                        "error": str(menu_error)
+                    })
+        return resp.ok()
+        
+    except Exception as e:
+        print(f"批量删除失败: {e}")
+        return resp.fail(resp.DataDestroyFail, detail=str(e))
     
+@router.put("/sys/permission/updateRoleMenu", summary="修改角色的菜单权限", name="修改角色的菜单权限")
+async def update_role_menu(
+   req: sys_userrole_schema.RoleMenuUpdate
+):  
+ 
+    try: 
+        #1. 查询角色的当前所有菜单权限
+        role_permissions = await RoleMenuRelp.selectMenu_by_role_id(req.role_id)  
+        current_menu_ids = role_permissions.get('menu_ids', [])
+        menu_ids=await Usermenu.select_all_menu_id()
+        # 验证新旧ID不能相同  
+        async with db.atomic_async():   
+        # 3. 检查新menu_id是否已存在
+         if req.new_menu_id in current_menu_ids:
+            return resp.fail(
+                resp.DataUpdateFail, 
+                detail=f"角色 {req.role_id} 已拥有菜单权限 {req.new_menu_id}"
+            )
+       
+          
+            # 2. 检查旧menu_id（req.menu_id）是否存在
+        if req.new_menu_id not in  menu_ids:
+              return resp.fail(
+                 resp.DataNotFound, 
+                 detail=f"没有菜单权限 {req.new_menu_id}"
+              )
+            
+         
+            # 添加新的权限
+        await RoleMenuRelp.add({
+                'role_id': req.role_id,
+                'menu_id': req.new_menu_id
+            })
+            
+            # 5. 查询更新后的权限
+            
+        return resp.ok(data={
+                "message": f"成功将菜单权限修改为 {req.new_menu_id}",
+                }
+            )
+            
+    except Exception as e:
+        return resp.fail(resp.DataUpdateFail, detail=str(e))
+
+@router.post("/sys/permission/queryRoleMenu", summary="查询角色-菜单权限关系", name="查询角色-菜单权限关系")
+async def query_role_menu(req: sys_userrole_schema.RoleMenuQuery):
+    try:
+        # 验证参数
+        if req.role_id is None and req.menu_id is None:
+            return resp.fail(resp.DataInvalid, detail="请输入要查询的参数")
+        
+        # 情况1：只提供role_id
+        if req.role_id is not None and req.menu_id is None:
+            role_permissions = await RoleMenuRelp.selectMenu_by_role_id(req.role_id)
+            
+            return resp.ok(data={
+                "role_id": req.role_id,
+                "menu_ids": role_permissions.get('menu_ids', [])
+            })
+        
+        # 情况2：只提供menu_id
+        elif req.menu_id is not None and req.role_id is None:
+            result = await async_db.execute(
+                RoleMenuRelp.select(RoleMenuRelp.role_id)
+                .where(RoleMenuRelp.menu_id == req.menu_id)
+                .dicts()
+            )
+            
+            role_ids = [row['role_id'] for row in result] if result else []
+            
+            return resp.ok(data={
+                "menu_id": req.menu_id,
+                "role_ids": role_ids
+            })
+        
+        # 情况3：同时提供role_id和menu_id
+        else:
+            result = await async_db.execute(
+                RoleMenuRelp.select()
+                .where(
+                    RoleMenuRelp.role_id == req.role_id,
+                    RoleMenuRelp.menu_id == req.menu_id
+                )
+                .dicts()
+            )
+            
+            # 直接返回是否存在记录
+            exists = len(result) > 0
+            
+            return resp.ok(data={
+                "role_id": req.role_id,
+                "menu_id": req.menu_id,
+                "exists": exists
+            })
+            
+    except Exception as e:
+        return resp.fail(resp.DataQueryFail, detail=str(e))
+        return resp.fail(resp.DataQueryFail, detail=str(e))
+
+   
+       
+         
 
 
 
+    
