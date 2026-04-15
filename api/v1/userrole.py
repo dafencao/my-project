@@ -19,21 +19,17 @@ LastEditors: Please set LastEditors
 LastEditTime: 2023-04-19 14:48:02
 '''
 
-from models.userrole import Permission, RoleMenuRelp, RolePermRelp, Userrole
-from common import deps, logger
+from models.userrole import Permission, RoleMenuRelp, Userrole
 from common.session import db, async_db
-from core import security
 from fastapi import APIRouter, Depends, HTTPException, Form, status
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any,List
 from schemas.response import resp
 from schemas.request import sys_userrole_schema
-from models.user import UserRoleRelp, Userinfo
+from models.user import UserRoleRelp
 from playhouse.shortcuts import model_to_dict, dict_to_model
 from peewee import fn, IntegrityError
 from models.usermenu import Usermenu
-import asyncio
-import traceback
 
 router = APIRouter()
 
@@ -55,7 +51,7 @@ async def role_add(req: sys_userrole_schema.RoleCreate):
                 await RoleMenuRelp.add({'role_id': roleId, 'menu_id': m_id,'create_at':role['create_at']})
         return resp.ok(data=roleId)
         
-    
+
     except IntegrityError as e:
         # 更精确地判断错误类型
         error_msg = str(e).lower()
@@ -339,7 +335,7 @@ async def query_role_menu(req: sys_userrole_schema.RoleMenuQuery):
     try:
         # 验证参数
         if req.role_id is None and req.menu_id is None:
-            return resp.fail(resp.DataInvalid, detail="请输入要查询的参数")
+            return resp.fail(resp.DataQueryFail, detail="请输入要查询的参数")
         
         # 情况1：只提供role_id
         if req.role_id is not None and req.menu_id is None:
@@ -386,7 +382,6 @@ async def query_role_menu(req: sys_userrole_schema.RoleMenuQuery):
             })
             
     except Exception as e:
-        return resp.fail(resp.DataQueryFail, detail=str(e))
         return resp.fail(resp.DataQueryFail, detail=str(e))
 
    
