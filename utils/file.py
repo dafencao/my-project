@@ -12,7 +12,6 @@ from peewee import fn
 
 from common.session import db, async_db
 from core.config import settings
-from models.file_info import FileInfo
 from schemas.response import resp
 from utils.tools_func import validateStr, convert_arr
 
@@ -37,46 +36,6 @@ contentTypeDict = {
 
 }
 
-
-async def save_file_info(result, bizId: str, bizType: str, fileNamePrefix):
-    res = await async_db.execute(
-        FileInfo.select(
-            fn.group_concat(FileInfo.fileName).python_value(convert_arr).alias('name')).group_by(
-            FileInfo.bizId).where(
-            FileInfo.bizId == bizId).dicts())
-    res = list(res)
-    if len(res) == 0:
-        nameList = []
-    else:
-        nameList = res[0]['name']
-    i = 1
-
-    while fileNamePrefix + '-' + fileNameDict[bizType] + '-' + str(i) + '.' + result['fileFormat'] in nameList:
-        i = i + 1
-        # print("r['viewUrl']")
-        # print(r['viewUrl'])
-    fileInfo = {
-            'id': uuid.uuid1(),
-            'bizId': bizId,
-            'bizType': bizType,
-            'fileName': fileNamePrefix + '-' + fileNameDict[bizType] + '-' + str(i) + '.' + result['fileFormat'],
-            'newName': result['fileName'],
-            'fileType': result['fileFormat'],
-            'fileSize': result['fileSize'],
-            'downloadUrl': result['downloadUrl'],
-            'viewUrl': result['viewUrl'],
-            'createAt': datetime.strftime(
-                datetime.now(pytz.timezone('Asia/Shanghai')), '%Y-%m-%d %H:%M:%S'),
-            # 'updateAt': datetime.strftime(
-            #     datetime.now(pytz.timezone('Asia/Shanghai')), '%Y-%m-%d %H:%M:%S')
-        }
-    try:
-        # if True:
-        async with db.atomic_async():
-            await FileInfo.add(fileInfo)
-        return True
-    except Exception as e:
-        raise HTTPException(400, '文件存储失败，详情：' + str(e))
 
 
 async def up_file(bizId: str, bizType: str, fileNamePrefix, fileList: List[Union[UploadFile, dict]]):
@@ -121,46 +80,7 @@ async def up_file(bizId: str, bizType: str, fileNamePrefix, fileList: List[Union
         raise HTTPException(400, '文件存储失败，详情：' + str(e))
     # return result['data']
 
-    res = await async_db.execute(
-        FileInfo.select(
-            fn.group_concat(FileInfo.fileName).python_value(convert_arr).alias('name')).group_by(
-            FileInfo.bizId).where(
-            FileInfo.bizId == bizId).dicts())
-    res = list(res)
-    if len(res) == 0:
-        nameList = []
-    else:
-        nameList = res[0]['name']
-    i = 1
-    for r in result['data']:
-        while fileNamePrefix + '-' + fileNameDict[bizType] + '-' + str(i) + '.' + r['fileFormat'] in nameList:
-            i = i + 1
-        # print("r['viewUrl']")
-        # print(r['viewUrl'])
-        fileInfo = {
-            'id': uuid.uuid1(),
-            'bizId': bizId,
-            'bizType': bizType,
-            'fileName': fileNamePrefix + '-' + fileNameDict[bizType] + '-' + str(i) + '.' + r['fileFormat'],
-            'newName': r['fileName'],
-            'fileType': r['fileFormat'],
-            'fileSize': r['fileSize'],
-            'downloadUrl': r['downloadUrl'],
-            'viewUrl': r['viewUrl'],
-            'createAt': datetime.strftime(
-                datetime.now(pytz.timezone('Asia/Shanghai')), '%Y-%m-%d %H:%M:%S'),
-            # 'updateAt': datetime.strftime(
-            #     datetime.now(pytz.timezone('Asia/Shanghai')), '%Y-%m-%d %H:%M:%S')
-        }
-        try:
-            # if True:
-            async with db.atomic_async():
-                await FileInfo.add(fileInfo)
-            return True
-        except Exception as e:
-            raise HTTPException(400, '文件存储失败，详情：' + str(e))
 
-            # return resp.fail(resp.DataStoreFail, detail=str(e))
 
 
 def get_url(category: str, model: str, filename: Union[int, str] = None):

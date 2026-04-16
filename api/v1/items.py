@@ -13,12 +13,9 @@ import uuid
 import requests
 from peewee import fn
 from playhouse.shortcuts import model_to_dict
-
 # from auth.auth_casbin import Authority, get_casbin
 from common.session import get_db, async_db, db
 from common.sys_kafka import kafka_client
-from models.file_info import FileInfo
-from models.update_fan_record import FanUpdateRecord, FanUpdateRecordRelp
 from models.user import Department, Userpost, Userline, Level, Userinfo
 from models.userrole import Userrole
 from schemas.request import sys_user_action
@@ -48,7 +45,6 @@ from tempfile import NamedTemporaryFile
 from pathlib import Path
 from fastapi import APIRouter, File, Request, UploadFile, Query, Depends
 from common.sys_redis import redis_client
-from models.fan import FanApplicationModel, FanCategory, Fan
 from schemas.response import resp
 
 import casbin

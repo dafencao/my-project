@@ -6,10 +6,8 @@ import requests
 from fastapi import APIRouter, Depends, HTTPException, Form, UploadFile, File
 from fastapi.responses import StreamingResponse
 from core import security
-from models.fan import Fan, FanCategory
 from common import deps, logger
 from schemas.response import resp
-from schemas.request import sys_fan_schema
 from starlette.responses import FileResponse
 
 from fastapi import status as http_status
@@ -43,80 +41,6 @@ async def find_docInfo_by_path(path: str):
         }
     return resp.ok(data=docInfo)
 
-
-# 根据项目号、文件类号查询本地文件的信息，包含：成功/失败， 文件名， 文件相对路径，创建时间
-async def find_docInfo(projectID: str, docType: int, pathType: str):
-    docInfo = {
-        "exist": False,
-        "docDir": "/",
-        "docName": "No file exist",
-        "createTime": str(datetime.min)
-    }
-    docInfoList = []
-    filePath = await get_path(pathType)
-    docType = str(docType)
-    # docDir = filePath + projectID[2:6] + '/'+projectID + '/'
-    if pathType == 'alter':
-        docDir = filePath + projectID[2:6]+'/' + \
-            projectID+'/alter/'
-        # +'bg' + projectID[2:]+str(recordCount).zfill(2)+'/'
-    else:
-        docDir = filePath + projectID[2:6]+'/'+projectID+'/'
-    if not os.path.exists(docDir):
-        os.makedirs(docDir)
-    if os.path.isdir(docDir):
-        for docName in os.listdir(docDir):
-            if docName == 'alter':
-                continue
-            data = [i for i in docName.split("-") if i not in ["", " "]]
-            pID, docT = data[:2]
-            docT = docT.split('.')[0]
-            if pathType == 'alter':
-                recordCount = await db.DB.projectChange.count_documents({"projectID": projectID})
-                if projectID[2:] == pID[2:len(projectID)] and str(recordCount).zfill(2) == pID[-2:] and docType == docT:
-                    docInfo["exist"] = True
-                    docInfo["docDir"] = docDir[1:]  # docDir[2:]
-                    docInfo["docName"] = docName
-                    docInfo["docDir"] = docInfo["docDir"] + docInfo["docName"]
-                    timestamp = os.path.getctime(docDir + docName)
-                    docInfo["createTime"] = datetime.utcfromtimestamp(
-                        timestamp).strftime("%Y-%m-%d")
-                    break
-                else:
-                    continue
-            try:
-                # and docT[len(docType)] == ".":
-
-                # [:len(docType)]:
-                if projectID[2:] == pID[2:len(projectID)] and docType == docT:
-                    # print('docInfo changed')
-                    docInfo["exist"] = True
-                    docInfo["docDir"] = docDir[1:]  # docDir[2:]
-                    docInfo["docName"] = docName
-                    timestamp = os.path.getctime(docDir + docName)
-                    docInfo["createTime"] = str(datetime.utcfromtimestamp(
-                        timestamp).strftime("%Y-%m-%d"))
-                    docInfo["docDir"] = docInfo["docDir"] + docInfo["docName"]
-
-                    if docType in ['3', '4', '5', '6', '7']:
-                        # print('append docName'+docName)
-                        # print(docInfo)
-                        docInfoList.append({
-                            "exist": True,
-                            "docName": docName,
-                            "createTime": str(datetime.utcfromtimestamp(
-                                timestamp).strftime("%Y-%m-%d")),
-                            "docDir": docDir[1:] + docInfo["docName"],
-                        })
-                        # print(docInfoList)
-                        continue
-                    break
-            except Exception as e:
-                print('error')
-                continue
-    if docType in ['3', '4', '5', '6', '7']:
-        return docInfoList
-    return docInfo
 
 
 @router.get("/api/preview/{path:path}")
@@ -242,41 +166,41 @@ async def upload_doc(file: UploadFile = File(...), model: str = Form(...), fileT
 # 删除一个文件夹下除传入的文件类型以外 同名不同文件类型的文件 先上传覆盖再删除避免文件丢失
 # isExcept 是否忽略不同文件类型的的覆盖及保留
 
-@router.post("/api/delete_doc")
-async def delete_doc1(item_dict: dict):
-    return await delete_doc(item_dict['pathType'], item_dict['ID'], item_dict['docName'], True)
+# @router.post("/api/delete_doc")
+# async def delete_doc1(item_dict: dict):
+#     return await delete_doc(item_dict['pathType'], item_dict['ID'], item_dict['docName'], True)
 
 
-async def delete_doc(pathType: str, ID: str, docName: str, isExcept: bool = False):
-    result = {
-        "success": True,
-        "message": "dictory does not exist."
-    }
-    docDir = await get_path(pathType, ID)
-    fileForm = docName.split('.').pop(1)
-    if not os.path.isdir(docDir):
-        return Response(content=dumps(result), media_type="application/json")
-    else:
-        delPath = docDir+docName.split('.').pop(0)+'.*'
-        delPreviewPath = docDir+'preview-'+docName.split('.').pop(0)+'.pdf'
+# async def delete_doc(pathType: str, ID: str, docName: str, isExcept: bool = False):
+#     result = {
+#         "success": True,
+#         "message": "dictory does not exist."
+#     }
+#     docDir = await get_path(pathType, ID)
+#     fileForm = docName.split('.').pop(1)
+#     if not os.path.isdir(docDir):
+#         return Response(content=dumps(result), media_type="application/json")
+#     else:
+#         delPath = docDir+docName.split('.').pop(0)+'.*'
+#         delPreviewPath = docDir+'preview-'+docName.split('.').pop(0)+'.pdf'
 
-        print('delPath')
-        print(delPath)
-        print('delPreviewPath')
-        print(delPreviewPath)
-        for file in iglob(delPath):
-            if file.split('.').pop(1) != fileForm:
-                print('remove_file')
-                print(file)
+#         print('delPath')
+#         print(delPath)
+#         print('delPreviewPath')
+#         print(delPreviewPath)
+#         for file in iglob(delPath):
+#             if file.split('.').pop(1) != fileForm:
+#                 print('remove_file')
+#                 print(file)
 
-                os.remove(file)
-            if isExcept:
-                os.remove(file)
-        if os.path.exists(delPreviewPath):
-            os.remove(delPreviewPath)
+#                 os.remove(file)
+#             if isExcept:
+#                 os.remove(file)
+#         if os.path.exists(delPreviewPath):
+#             os.remove(delPreviewPath)
 
-        result["message"] = 'delete successful'
-        return Response(content=dumps(result), media_type="application/json")
+#         result["message"] = 'delete successful'
+#         return Response(content=dumps(result), media_type="application/json")
 
 
 # @router.post("/api/projects/delete_doc")
@@ -310,37 +234,37 @@ async def delete_doc(pathType: str, ID: str, docName: str, isExcept: bool = Fals
 
 
 # 通过项目ID和文件类别获取文件详细信息 下载路径  Get file info by id and type
-@router.post("/api/projects/query_docs")
-async def query_docs(item_data: dict):
-    result = {
-        "success": False,
-        "message": ""
-    }
-    projectID, docTypes = item_data["ID"], item_data["docTypes"]
-    fileType = 'project'
-    try:
-        fileType = item_data['fileType']
-    except Exception as e:
-        if type(e) == 'KeyError':
-            fileType = 'project'
-    if not projectID:
-        result["message"] = "projectID:{} is null.".format(projectID)
-        return Response(content=dumps(result), media_type="application/json")
-    if not docTypes:
-        result["message"] = "docTypes:{} is null.".format(docTypes)
-        return Response(content=dumps(result), media_type="application/json")
+# @router.post("/api/projects/query_docs")
+# async def query_docs(item_data: dict):
+#     result = {
+#         "success": False,
+#         "message": ""
+#     }
+#     projectID, docTypes = item_data["ID"], item_data["docTypes"]
+#     fileType = 'project'
+#     try:
+#         fileType = item_data['fileType']
+#     except Exception as e:
+#         if type(e) == 'KeyError':
+#             fileType = 'project'
+#     if not projectID:
+#         result["message"] = "projectID:{} is null.".format(projectID)
+#         return Response(content=dumps(result), media_type="application/json")
+#     if not docTypes:
+#         result["message"] = "docTypes:{} is null.".format(docTypes)
+#         return Response(content=dumps(result), media_type="application/json")
 
-    if type(docTypes) is not list:
-        docTypes = [docTypes]
-    result = []
-    for docType in docTypes:
-        docInfo = await find_docInfo(projectID, docType, pathType=fileType)
-        # print('docInfo')
-        # print(docInfo)
-        # docInfo["docDir"] = docInfo["docDir"] + docInfo["docName"]
-        # docInfo["createTime"] = str(docInfo["createTime"])[:10]
-        result.append(docInfo)
-    return Response(content=dumps(result), media_type="application/json")
+#     if type(docTypes) is not list:
+#         docTypes = [docTypes]
+#     result = []
+#     for docType in docTypes:
+#         docInfo = await find_docInfo(projectID, docType, pathType=fileType)
+#         # print('docInfo')
+#         # print(docInfo)
+#         # docInfo["docDir"] = docInfo["docDir"] + docInfo["docName"]
+#         # docInfo["createTime"] = str(docInfo["createTime"])[:10]
+#         result.append(docInfo)
+#     return Response(content=dumps(result), media_type="application/json")
 
 
 # @router.post('/api/import_excel')
