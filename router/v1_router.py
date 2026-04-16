@@ -46,6 +46,7 @@ from api.v1.line_deep import router as line_deep_router
 from api.v1.material import router as material_router
 from api.v1.equipment import router as equipment_router
 from api.v1.weld import router as weld_router
+from api.v1.joint import router as joint_router
 
 
 api_v1_router = APIRouter()
@@ -101,3 +102,5 @@ api_v1_router.include_router(
     equipment_router, prefix="/api", tags=["焊接装置信息"])
 api_v1_router.include_router(
     weld_router, prefix="/api", tags=["焊接PINN预测模块"])
+api_v1_router.include_router(
+    joint_router, prefix="/api", tags=["焊接接头信息"])
