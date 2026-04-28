@@ -37,9 +37,11 @@ from api.v1.department import router as department_router
 # from api.v1.jaka import router as jaka_control_router
 from api.v1.material import router as material_router
 from api.v1.equipment import router as equipment_router
-from api.v1.weld import router as weld_router
+from api.v1.weldPinn import router as weldPinn_router
 from api.v1.joint import router as joint_router
 from api.v1.weld_methods import router as weld_method_router
+from api.v1.Wdata_manage import router as Wdata_manage_router
+from api.v1.w_pred_model import router as w_pred_model_router
 
 
 api_v1_router = APIRouter()
@@ -80,8 +82,12 @@ api_v1_router.include_router(
 api_v1_router.include_router(
     equipment_router, prefix="/api", tags=["焊接装置信息"])
 api_v1_router.include_router(
-    weld_router, prefix="/api", tags=["焊接PINN预测模块"])
+    weldPinn_router, prefix="/api", tags=["焊接PINN预测模块"])
 api_v1_router.include_router(
     joint_router, prefix="/api", tags=["焊接接头信息"])
 api_v1_router.include_router(
     weld_method_router, prefix="/api", tags=["焊接方法信息"])
+api_v1_router.include_router(
+    Wdata_manage_router, prefix="/api", tags=["焊接数据集管理"])
+api_v1_router.include_router(
+    w_pred_model_router, prefix="/api", tags=["焊接预训练模型"])
