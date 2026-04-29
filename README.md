@@ -23,6 +23,7 @@ python3.8
 pip install -r requirements.txt -i http://pypi.douban.com/simple --trusted-host pypi.douban.com
 pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn
 清华源
+还需要安装pytorch+pyarrow
 ```
 
 若报错：

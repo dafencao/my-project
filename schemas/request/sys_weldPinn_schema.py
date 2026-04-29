@@ -33,3 +33,10 @@ class BatchPredictRequest(BaseModel):
     speed: float = Field(..., description="焊接速度 (mm/s)")
     radius: float = Field(0.35, description="热源半径 (mm)")
     depth: float = Field(3.1, description="热源深度 (mm)")
+
+class TrainStartRequest(BaseModel):
+    joint_id: int = Field(..., description="要训练的接头 ID")
+    method_id: int = Field(..., description="要训练的工艺 ID")
+    version: str = Field("V1.0", description="模型版本")
+    description: str = Field("系统自动发起的训练任务", description="模型备注")
+    epochs: int = Field(15000, description="训练轮数")

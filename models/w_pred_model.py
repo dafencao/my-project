@@ -18,19 +18,20 @@ class TrainedModel(BaseModel):
     version = CharField(max_length=50)
     model_path = CharField(max_length=255)
     
-    material_id = IntegerField()
-    joint_id = IntegerField()
-    method_id = IntegerField()
+    # 【核心修改】适用工况：去掉了单一的 material_id
+    joint_id = IntegerField(help_text="适用的接头 ID")
+    method_id = IntegerField(help_text="适用的焊接方法 ID")
     
-    # 【核心修改】最大变形量相对误差 (例如 5.25 表示 5.25%)
-    max_def_rel_error = DecimalField(max_digits=10, decimal_places=4, null=True) 
+    # 【新增】训练溯源：记录这个通用模型训练时涵盖了哪些材料的 ID 列表 (如 [1, 2, 5])
+    trained_material_ids = JSONField(null=True, help_text="训练集包含的母材ID列表")
     
+    max_def_rel_error = DecimalField(max_digits=10, decimal_places=4, null=True, help_text="最大变形量相对误差(%)")
     description = TextField(null=True) 
     trained_on_batch = CharField(max_length=50, null=True)
     metrics = JSONField(null=True)
     is_deployed = BooleanField(default=False) 
     
-    created_at = DateTimeField(null=True)
+    created_at = DateTimeField(null=True, default=datetime.datetime.now)
     updated_at = DateTimeField(null=True)
 
     class Meta:
